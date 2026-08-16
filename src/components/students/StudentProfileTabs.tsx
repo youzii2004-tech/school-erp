@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Inbox, FileText, Plus, UserPlus } from "lucide-react";
 import { toast } from "@/components/ui/toast";
 import { EnrollDialog } from "@/components/students/EnrollDialog";
+import { cn } from "@/lib/utils";
 
 // Shape matches the include on GET /api/students/[id] (Task 6):
 // guardianLinks -> guardian, enrollments -> class/section/session (desc by createdAt),
@@ -387,6 +388,132 @@ function LinkGuardianDialog({ studentId, onLinked }: { studentId: string; onLink
   );
 }
 
+// Matches GET /api/attendance/summary response (Task 9, src/app/api/attendance/summary/route.ts):
+// { records: Attendance[], percentage: number }. Each record is a plain Prisma
+// Attendance row (id, studentId, date, status, remarks, markedById) — date and
+// status are what this tab needs.
+type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "LEAVE";
+type AttendanceRecord = { id: string; date: string; status: AttendanceStatus };
+
+function currentMonthValue() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function percentageBadgeClass(pct: number) {
+  if (pct >= 75) return "bg-success/10 text-success";
+  if (pct >= 50) return "bg-warning/10 text-warning";
+  return "bg-destructive/10 text-destructive";
+}
+
+const ATTENDANCE_STATUS_CLASS: Record<AttendanceStatus, string> = {
+  PRESENT: "bg-success/10 text-success",
+  ABSENT: "bg-destructive/10 text-destructive",
+  LATE: "bg-warning/10 text-warning",
+  LEAVE: "bg-primary/10 text-primary",
+};
+
+function AttendanceTab({ studentId }: { studentId: string }) {
+  const [month, setMonth] = useState(currentMonthValue());
+  const [loading, setLoading] = useState(true);
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [percentage, setPercentage] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch(`/api/attendance/summary?studentId=${studentId}&month=${month}`)
+      .then((res) => (res.ok ? res.json() : { records: [], percentage: 0 }))
+      .then((data) => {
+        if (cancelled) return;
+        setRecords(data.records ?? []);
+        setPercentage(typeof data.percentage === "number" ? data.percentage : 0);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRecords([]);
+          setPercentage(0);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId, month]);
+
+  const sortedRecords = [...records].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="space-y-1.5">
+          <label className="text-xs text-muted-foreground">Month</label>
+          <Input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="w-44"
+          />
+        </div>
+        {percentage !== null && (
+          <div
+            className={cn(
+              "flex flex-col items-end gap-0.5 rounded-lg px-3 py-1.5",
+              percentageBadgeClass(percentage)
+            )}
+          >
+            <span className="text-xs opacity-80">Attendance this month</span>
+            <span className="text-lg font-semibold">{percentage}%</span>
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <Card>
+          <CardContent className="space-y-2 pt-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-8 w-full animate-pulse rounded-md bg-muted" />
+            ))}
+          </CardContent>
+        </Card>
+      ) : sortedRecords.length === 0 ? (
+        <Card>
+          <CardContent>
+            <EmptyState label="No attendance records for this month" />
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="py-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedRecords.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell>{formatDate(r.date)}</TableCell>
+                  <TableCell className="text-right">
+                    <Badge className={cn("border-0", ATTENDANCE_STATUS_CLASS[r.status])} variant="outline">
+                      {r.status}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 export function StudentProfileTabs({ student }: { student: StudentProfile }) {
   // Local copy so this component can refresh itself after enroll / guardian-link
   // actions without requiring the parent page to pass a refetch callback (the
@@ -435,6 +562,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
           <TabsTrigger value="academic">Academic History</TabsTrigger>
           <TabsTrigger value="history">Class / Promotion / Transfer</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="attendance">Attendance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -666,6 +794,10 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
               </Table>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="attendance">
+          <AttendanceTab studentId={profile.id} />
         </TabsContent>
       </Tabs>
     </div>
