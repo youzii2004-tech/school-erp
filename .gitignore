@@ -31,7 +31,20 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
+.env
 .env*
+
+# Prisma database
+prisma/dev.db
+
+# Uploads
+/uploads
+
+# Prisma CLI generated files
+skills-lock.json
+.agents/
+.claude/
+.windsurf/
 
 # vercel
 .vercel
@@ -39,3 +52,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma

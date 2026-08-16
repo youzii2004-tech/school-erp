@@ -1,0 +1,354 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  LEAVE
+}
+
+enum VoucherStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  ONLINE
+  CHEQUE
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  passwordHash  String
+  role          Role
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  student       Student?
+  teacher       Teacher?
+  guardianLinks GuardianLink[]
+}
+
+model AcademicSession {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g. "2026-2027"
+  startDate   DateTime
+  endDate     DateTime
+  isCurrent   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  classes     Class[]
+  enrollments Enrollment[]
+  examinations Examination[]
+  feeVouchers FeeVoucher[]
+}
+
+model Class {
+  id        String    @id @default(cuid())
+  name      String    // e.g. "Grade 6"
+  sessionId String
+  session   AcademicSession @relation(fields: [sessionId], references: [id])
+  sections  Section[]
+  enrollments Enrollment[]
+  feeStructures FeeStructure[]
+  deletedAt DateTime?
+
+  @@unique([name, sessionId])
+}
+
+model Section {
+  id           String   @id @default(cuid())
+  name         String   // e.g. "A"
+  classId      String
+  class        Class    @relation(fields: [classId], references: [id])
+  enrollments  Enrollment[]
+  timetableEntries TimetableEntry[]
+  deletedAt    DateTime?
+
+  @@unique([name, classId])
+}
+
+model Subject {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  code          String   @unique
+  deletedAt     DateTime?
+  examSubjects  ExamSubject[]
+  timetableEntries TimetableEntry[]
+  teacherSubjects TeacherSubject[]
+}
+
+model Student {
+  id                String    @id @default(cuid())
+  admissionNumber   String    @unique
+  userId            String?   @unique
+  user              User?     @relation(fields: [userId], references: [id])
+  fullName          String
+  gender            String
+  dob               DateTime
+  cnicOrBForm       String?
+  bloodGroup        String?
+  photoPath         String?
+  phone             String?
+  address           String?
+  previousSchool    String?
+  status            String    @default("ACTIVE") // ACTIVE, LEFT, GRADUATED
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  guardianLinks     GuardianLink[]
+  enrollments       Enrollment[]
+  attendance        Attendance[]
+  feeVouchers       FeeVoucher[]
+  marks             Mark[]
+  documents         Document[]
+  promotions        PromotionHistory[]
+  transfers         TransferHistory[]
+}
+
+model Guardian {
+  id        String   @id @default(cuid())
+  fullName  String
+  relation  String   // Father, Mother, Guardian
+  phone     String
+  email     String?
+  cnic      String?
+  address   String?
+  links     GuardianLink[]
+}
+
+model GuardianLink {
+  id         String   @id @default(cuid())
+  studentId  String
+  guardianId String
+  userId     String?  // if this guardian has a Parent portal login
+  student    Student  @relation(fields: [studentId], references: [id])
+  guardian   Guardian @relation(fields: [guardianId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@unique([studentId, guardianId])
+}
+
+model Enrollment {
+  id               String   @id @default(cuid())
+  studentId        String
+  academicSessionId String
+  classId          String
+  sectionId        String
+  rollNumber       String
+  status           String   @default("ACTIVE") // ACTIVE, PROMOTED, TRANSFERRED, LEFT
+  createdAt        DateTime @default(now())
+
+  student   Student         @relation(fields: [studentId], references: [id])
+  session   AcademicSession @relation(fields: [academicSessionId], references: [id])
+  class     Class           @relation(fields: [classId], references: [id])
+  section   Section         @relation(fields: [sectionId], references: [id])
+
+  @@unique([studentId, academicSessionId])
+  @@unique([sectionId, rollNumber, academicSessionId])
+}
+
+model PromotionHistory {
+  id             String   @id @default(cuid())
+  studentId      String
+  fromClassName  String
+  toClassName    String
+  fromSessionName String
+  toSessionName  String
+  promotedAt     DateTime @default(now())
+  student        Student  @relation(fields: [studentId], references: [id])
+}
+
+model TransferHistory {
+  id          String   @id @default(cuid())
+  studentId   String
+  type        String   // "IN" or "OUT"
+  reason      String?
+  otherSchool String?
+  date        DateTime @default(now())
+  student     Student  @relation(fields: [studentId], references: [id])
+}
+
+model Attendance {
+  id        String            @id @default(cuid())
+  studentId String
+  date      DateTime
+  status    AttendanceStatus
+  remarks   String?
+  markedById String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, date])
+}
+
+model FeeStructure {
+  id          String   @id @default(cuid())
+  classId     String
+  category    String   // Tuition, Admission, Exam, Transport, Computer, Library, Activity, Other
+  amount      Float
+  frequency   String   // MONTHLY, ONE_TIME, ANNUAL
+  class       Class    @relation(fields: [classId], references: [id])
+  deletedAt   DateTime?
+}
+
+model FeeVoucher {
+  id               String   @id @default(cuid())
+  voucherNumber    String   @unique
+  studentId        String
+  academicSessionId String
+  billingMonth     String   // "2026-08"
+  dueDate          DateTime
+  breakdown        String   // JSON-encoded [{category, amount}]
+  previousBalance  Float    @default(0)
+  discount         Float    @default(0)
+  fine             Float    @default(0)
+  totalPayable     Float
+  paidAmount       Float    @default(0)
+  status           VoucherStatus @default(UNPAID)
+  createdAt        DateTime @default(now())
+  deletedAt        DateTime?
+
+  student  Student         @relation(fields: [studentId], references: [id])
+  session  AcademicSession @relation(fields: [academicSessionId], references: [id])
+  payments FeePayment[]
+}
+
+model FeePayment {
+  id             String   @id @default(cuid())
+  voucherId      String
+  amount         Float
+  method         PaymentMethod
+  reference      String?
+  paidAt         DateTime @default(now())
+  recordedById   String
+  voucher        FeeVoucher @relation(fields: [voucherId], references: [id])
+  deletedAt      DateTime?
+}
+
+model Examination {
+  id             String   @id @default(cuid())
+  name           String   // "Midterm 2026"
+  type           String   // MIDTERM, FINAL, MONTHLY, QUIZ, CLASS_TEST
+  academicSessionId String
+  publishedAt    DateTime?
+  createdAt      DateTime @default(now())
+  session        AcademicSession @relation(fields: [academicSessionId], references: [id])
+  examSubjects   ExamSubject[]
+  marks          Mark[]
+}
+
+model ExamSubject {
+  id            String   @id @default(cuid())
+  examinationId String
+  subjectId     String
+  classId       String
+  totalMarks    Float
+  passingMarks  Float
+  examDate      DateTime
+  examination   Examination @relation(fields: [examinationId], references: [id])
+  subject       Subject     @relation(fields: [subjectId], references: [id])
+  marks         Mark[]
+
+  @@unique([examinationId, subjectId, classId])
+}
+
+model Mark {
+  id             String   @id @default(cuid())
+  examinationId  String
+  examSubjectId  String
+  studentId      String
+  obtainedMarks  Float
+  enteredById    String
+  updatedAt      DateTime @updatedAt
+  examination    Examination @relation(fields: [examinationId], references: [id])
+  examSubject    ExamSubject @relation(fields: [examSubjectId], references: [id])
+  student        Student     @relation(fields: [studentId], references: [id])
+
+  @@unique([examSubjectId, studentId])
+}
+
+model Teacher {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+  fullName        String
+  cnic            String?
+  qualification   String?
+  joiningDate     DateTime?
+  designation     String?
+  phone           String?
+  photoPath       String?
+  deletedAt       DateTime?
+  subjects        TeacherSubject[]
+  timetableEntries TimetableEntry[]
+}
+
+model TeacherSubject {
+  id        String  @id @default(cuid())
+  teacherId String
+  subjectId String
+  classId   String
+  sectionId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  @@unique([teacherId, subjectId, classId, sectionId])
+}
+
+model TimetableEntry {
+  id        String   @id @default(cuid())
+  sectionId String
+  subjectId String
+  teacherId String
+  dayOfWeek Int      // 0-6
+  startTime String   // "08:00"
+  endTime   String   // "08:45"
+  room      String?
+  section   Section  @relation(fields: [sectionId], references: [id])
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+}
+
+model Announcement {
+  id         String   @id @default(cuid())
+  title      String
+  body       String
+  audience   String   // ALL, CLASS:<id>, SECTION:<id>, ROLE:<role>
+  createdAt  DateTime @default(now())
+  createdById String
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  studentId String
+  type      String   // BIRTH_CERT, CNIC, PREVIOUS_CERT, PHOTO, LEAVING_CERT, OTHER
+  filePath  String
+  uploadedAt DateTime @default(now())
+  student   Student  @relation(fields: [studentId], references: [id])
+}
+
+model Setting {
+  key   String @id
+  value String // JSON-encoded value
+}
