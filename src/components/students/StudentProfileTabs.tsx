@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,21 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { Inbox, FileText } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Inbox, FileText, Plus, UserPlus } from "lucide-react";
+import { toast } from "@/components/ui/toast";
+import { EnrollDialog } from "@/components/students/EnrollDialog";
 
 // Shape matches the include on GET /api/students/[id] (Task 6):
 // guardianLinks -> guardian, enrollments -> class/section/session (desc by createdAt),
@@ -38,7 +53,9 @@ type Enrollment = {
   status: string;
   class: { id: string; name: string };
   section: { id: string; name: string };
-  session: { id: string; name: string };
+  // isCurrent comes through automatically: GET /api/students/[id] (Task 6) does a
+  // plain `session: true` include, which returns the full AcademicSession row.
+  session: { id: string; name: string; isCurrent: boolean };
 };
 
 type PromotionHistory = {
@@ -126,28 +143,287 @@ function EmptyState({ label }: { label: string }) {
   );
 }
 
+// Link Guardian mini-dialog: search existing guardians by phone/name (client-side
+// filter over GET /api/guardians — no dedicated search API for v1) or create a new
+// Guardian then immediately link it. Kept inline in this file since the brief only
+// lists EnrollDialog.tsx as a separate component to create.
+function LinkGuardianDialog({ studentId, onLinked }: { studentId: string; onLinked: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"search" | "create">("search");
+  const [submitting, setSubmitting] = useState(false);
+
+  // Search mode
+  const [loadingGuardians, setLoadingGuardians] = useState(false);
+  const [guardians, setGuardians] = useState<Guardian[]>([]);
+  const [query, setQuery] = useState("");
+
+  // Create mode
+  const [fullName, setFullName] = useState("");
+  const [relation, setRelation] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [cnic, setCnic] = useState("");
+  const [address, setAddress] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setMode("search");
+    setQuery("");
+    setFullName("");
+    setRelation("");
+    setPhone("");
+    setEmail("");
+    setCnic("");
+    setAddress("");
+
+    setLoadingGuardians(true);
+    fetch("/api/guardians")
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setGuardians)
+      .finally(() => setLoadingGuardians(false));
+  }, [open]);
+
+  const filteredGuardians = guardians.filter((g) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return g.fullName.toLowerCase().includes(q) || g.phone.toLowerCase().includes(q);
+  });
+
+  const linkGuardian = async (guardianId: string) => {
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/students/${studentId}/guardians`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ guardianId }),
+      });
+      if (res.status === 409) {
+        const body = await res.json();
+        toast.add({
+          title: "Already linked",
+          description: body.error ?? "This guardian is already linked to this student.",
+          type: "warning",
+        });
+        return;
+      }
+      if (!res.ok) throw new Error("Could not link guardian.");
+      toast.add({ title: "Linked", description: "Guardian linked to student.", type: "success" });
+      setOpen(false);
+      onLinked();
+    } catch (err) {
+      toast.add({
+        title: "Something went wrong",
+        description: err instanceof Error ? err.message : "Could not link guardian.",
+        type: "error",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCreateAndLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fullName || !relation || !phone) {
+      toast.add({
+        title: "Missing information",
+        description: "Please fill in full name, relation and phone.",
+        type: "warning",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const createRes = await fetch("/api/guardians", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName,
+          relation,
+          phone,
+          email: email || undefined,
+          cnic: cnic || undefined,
+          address: address || undefined,
+        }),
+      });
+      if (!createRes.ok) {
+        throw new Error(createRes.status === 400 ? "Please check the highlighted fields." : "Could not create guardian.");
+      }
+      const guardian = await createRes.json();
+      await linkGuardian(guardian.id);
+    } catch (err) {
+      toast.add({
+        title: "Something went wrong",
+        description: err instanceof Error ? err.message : "Could not create guardian.",
+        type: "error",
+      });
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger
+        render={
+          <Button>
+            <UserPlus />
+            Link Guardian
+          </Button>
+        }
+      />
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Link Guardian</DialogTitle>
+          <DialogDescription>Search an existing guardian or create a new one.</DialogDescription>
+        </DialogHeader>
+
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={mode === "search" ? "default" : "outline"}
+            onClick={() => setMode("search")}
+          >
+            Search existing
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={mode === "create" ? "default" : "outline"}
+            onClick={() => setMode("create")}
+          >
+            <Plus />
+            Create new
+          </Button>
+        </div>
+
+        {mode === "search" ? (
+          <div className="space-y-3">
+            <Input
+              placeholder="Search by name or phone…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <div className="max-h-64 space-y-1 overflow-y-auto">
+              {loadingGuardians ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">Loading…</p>
+              ) : filteredGuardians.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">No guardians found.</p>
+              ) : (
+                filteredGuardians.map((g) => (
+                  <div
+                    key={g.id}
+                    className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm"
+                  >
+                    <div>
+                      <p className="font-medium">{g.fullName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {g.relation} · {g.phone}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={submitting}
+                      onClick={() => linkGuardian(g.id)}
+                    >
+                      Link
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <form onSubmit={handleCreateAndLink} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="g-fullName">Full Name</Label>
+              <Input id="g-fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="g-relation">Relation</Label>
+              <Input
+                id="g-relation"
+                placeholder="Father / Mother / Guardian"
+                value={relation}
+                onChange={(e) => setRelation(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="g-phone">Phone</Label>
+              <Input id="g-phone" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="g-email">Email</Label>
+              <Input id="g-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="g-cnic">CNIC</Label>
+              <Input id="g-cnic" value={cnic} onChange={(e) => setCnic(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="g-address">Address</Label>
+              <Input id="g-address" value={address} onChange={(e) => setAddress(e.target.value)} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Saving…" : "Create & Link"}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function StudentProfileTabs({ student }: { student: StudentProfile }) {
+  // Local copy so this component can refresh itself after enroll / guardian-link
+  // actions without requiring the parent page to pass a refetch callback (the
+  // parent page is out of scope for this task).
+  const [profile, setProfile] = useState<StudentProfile>(student);
+
+  useEffect(() => {
+    setProfile(student);
+  }, [student]);
+
+  const refetch = async () => {
+    const res = await fetch(`/api/students/${profile.id}`);
+    if (res.ok) setProfile(await res.json());
+  };
+
   // Latest enrollment = first item, since the API orders enrollments desc by
-  // createdAt. No enrollment yet (Task 9 not built) -> "—" everywhere below.
-  const latestEnrollment = student.enrollments[0] ?? null;
+  // createdAt.
+  const latestEnrollment = profile.enrollments[0] ?? null;
+  const hasCurrentEnrollment = profile.enrollments.some((e) => e.session.isCurrent);
 
   return (
     <div className="space-y-6">
       <Card>
         <CardContent className="flex flex-wrap items-center gap-4 pt-4">
           <Avatar size="lg">
-            <AvatarFallback>{initials(student.fullName) || "?"}</AvatarFallback>
+            <AvatarFallback>{initials(profile.fullName) || "?"}</AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-1">
-            <h1 className="font-heading text-xl font-semibold">{student.fullName}</h1>
+            <h1 className="font-heading text-xl font-semibold">{profile.fullName}</h1>
             <p className="text-sm text-muted-foreground">
-              Admission # {student.admissionNumber}
+              Admission # {profile.admissionNumber}
               {latestEnrollment
                 ? ` · ${latestEnrollment.class.name} - ${latestEnrollment.section.name}`
                 : " · No enrollment yet"}
             </p>
           </div>
-          <Badge variant={STATUS_VARIANT[student.status] ?? "outline"}>{student.status}</Badge>
+          <Badge variant={STATUS_VARIANT[profile.status] ?? "outline"}>{profile.status}</Badge>
         </CardContent>
       </Card>
 
@@ -161,10 +437,15 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview">
+        <TabsContent value="overview" className="space-y-4">
+          {!hasCurrentEnrollment && (
+            <div className="flex justify-end">
+              <EnrollDialog studentId={profile.id} onEnrolled={refetch} />
+            </div>
+          )}
           <Card>
             <CardContent className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Field label="Admission Number" value={student.admissionNumber} />
+              <Field label="Admission Number" value={profile.admissionNumber} />
               <Field
                 label="Class / Section"
                 value={
@@ -177,7 +458,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
               <Field label="Roll Number" value={latestEnrollment?.rollNumber ?? "—"} />
               <Field
                 label="Status"
-                value={<Badge variant={STATUS_VARIANT[student.status] ?? "outline"}>{student.status}</Badge>}
+                value={<Badge variant={STATUS_VARIANT[profile.status] ?? "outline"}>{profile.status}</Badge>}
               />
             </CardContent>
           </Card>
@@ -186,19 +467,22 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
         <TabsContent value="personal">
           <Card>
             <CardContent className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Field label="Date of Birth" value={formatDate(student.dob)} />
-              <Field label="Gender" value={student.gender} />
-              <Field label="CNIC / B-Form" value={student.cnicOrBForm} />
-              <Field label="Blood Group" value={student.bloodGroup} />
-              <Field label="Phone" value={student.phone} />
-              <Field label="Previous School" value={student.previousSchool} />
-              <Field label="Address" value={student.address} />
+              <Field label="Date of Birth" value={formatDate(profile.dob)} />
+              <Field label="Gender" value={profile.gender} />
+              <Field label="CNIC / B-Form" value={profile.cnicOrBForm} />
+              <Field label="Blood Group" value={profile.bloodGroup} />
+              <Field label="Phone" value={profile.phone} />
+              <Field label="Previous School" value={profile.previousSchool} />
+              <Field label="Address" value={profile.address} />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="guardian">
-          {student.guardianLinks.length === 0 ? (
+        <TabsContent value="guardian" className="space-y-4">
+          <div className="flex justify-end">
+            <LinkGuardianDialog studentId={profile.id} onLinked={refetch} />
+          </div>
+          {profile.guardianLinks.length === 0 ? (
             <Card>
               <CardContent>
                 <EmptyState label="No guardians linked yet" />
@@ -217,7 +501,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {student.guardianLinks.map((link) => (
+                  {profile.guardianLinks.map((link) => (
                     <TableRow key={link.id}>
                       <TableCell className="font-medium">{link.guardian.fullName}</TableCell>
                       <TableCell>{link.guardian.relation}</TableCell>
@@ -233,7 +517,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
         </TabsContent>
 
         <TabsContent value="academic">
-          {student.enrollments.length === 0 ? (
+          {profile.enrollments.length === 0 ? (
             <Card>
               <CardContent>
                 <EmptyState label="No enrollment history yet" />
@@ -252,7 +536,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {student.enrollments.map((enrollment) => (
+                  {profile.enrollments.map((enrollment) => (
                     <TableRow key={enrollment.id}>
                       <TableCell>{enrollment.session.name}</TableCell>
                       <TableCell>{enrollment.class.name}</TableCell>
@@ -272,7 +556,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
         <TabsContent value="history" className="space-y-6">
           <div className="space-y-2">
             <h2 className="text-sm font-semibold">Promotion History</h2>
-            {student.promotions.length === 0 ? (
+            {profile.promotions.length === 0 ? (
               <Card>
                 <CardContent>
                   <EmptyState label="No promotion history yet" />
@@ -289,7 +573,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {student.promotions.map((p) => (
+                    {profile.promotions.map((p) => (
                       <TableRow key={p.id}>
                         <TableCell>
                           {p.fromClassName} ({p.fromSessionName})
@@ -308,7 +592,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
 
           <div className="space-y-2">
             <h2 className="text-sm font-semibold">Transfer History</h2>
-            {student.transfers.length === 0 ? (
+            {profile.transfers.length === 0 ? (
               <Card>
                 <CardContent>
                   <EmptyState label="No transfer history yet" />
@@ -326,7 +610,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {student.transfers.map((t) => (
+                    {profile.transfers.map((t) => (
                       <TableRow key={t.id}>
                         <TableCell>
                           <Badge variant="outline">{t.type}</Badge>
@@ -344,7 +628,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
         </TabsContent>
 
         <TabsContent value="documents">
-          {student.documents.length === 0 ? (
+          {profile.documents.length === 0 ? (
             <Card>
               <CardContent>
                 <EmptyState label="No documents uploaded yet" />
@@ -361,7 +645,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {student.documents.map((doc) => (
+                  {profile.documents.map((doc) => (
                     <TableRow key={doc.id}>
                       <TableCell>{doc.type}</TableCell>
                       <TableCell>{formatDate(doc.uploadedAt)}</TableCell>
@@ -387,3 +671,4 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
     </div>
   );
 }
+
