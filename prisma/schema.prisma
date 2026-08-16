@@ -253,6 +253,7 @@ model Examination {
   academicSessionId String
   publishedAt    DateTime?
   createdAt      DateTime @default(now())
+  deletedAt      DateTime?
   session        AcademicSession @relation(fields: [academicSessionId], references: [id])
   examSubjects   ExamSubject[]
   marks          Mark[]
@@ -266,6 +267,7 @@ model ExamSubject {
   totalMarks    Float
   passingMarks  Float
   examDate      DateTime
+  deletedAt     DateTime?
   examination   Examination @relation(fields: [examinationId], references: [id])
   subject       Subject     @relation(fields: [subjectId], references: [id])
   marks         Mark[]
@@ -281,6 +283,7 @@ model Mark {
   obtainedMarks  Float
   enteredById    String
   updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
   examination    Examination @relation(fields: [examinationId], references: [id])
   examSubject    ExamSubject @relation(fields: [examSubjectId], references: [id])
   student        Student     @relation(fields: [studentId], references: [id])
