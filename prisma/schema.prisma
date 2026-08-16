@@ -57,6 +57,7 @@ model AcademicSession {
   endDate     DateTime
   isCurrent   Boolean  @default(false)
   createdAt   DateTime @default(now())
+  deletedAt   DateTime?
   classes     Class[]
   enrollments Enrollment[]
   examinations Examination[]
