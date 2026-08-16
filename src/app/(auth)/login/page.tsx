@@ -30,7 +30,10 @@ export default function LoginPage() {
     if (result?.error) {
       toast.add({
         title: "Login Failed",
-        description: result.error,
+        description:
+          result.error === "CredentialsSignin"
+            ? "Invalid username or password"
+            : "Something went wrong. Please try again.",
         type: "error",
       });
     } else if (result?.ok) {
