@@ -69,7 +69,11 @@ export async function POST(req: NextRequest) {
           })
         ).map((e) => e.rollNumber)
       );
-      let rollCounter = existingRolls.size;
+      // Walk up from 0 (not existingRolls.size) so gaps below the seed point
+      // are actually filled, not permanently skipped — roll numbers are free
+      // text (EnrollDialog allows manual non-sequential entry), so "count of
+      // existing rows" is not the same as "highest number in use."
+      let rollCounter = 0;
 
       const promoted: string[] = [];
       const skipped: { studentId: string; reason: string }[] = [];
