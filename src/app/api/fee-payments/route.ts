@@ -21,10 +21,15 @@ export async function POST(req: NextRequest) {
       const payment = await tx.feePayment.create({
         data: { ...body, recordedById: session!.user.id },
       });
-      const newPaidAmount = voucher.paidAmount + body.amount;
+      // atomic increment (not a read-then-write of a JS-computed value) so two
+      // concurrent payments against the same voucher can't lose an update
+      const incremented = await tx.feeVoucher.update({
+        where: { id: voucher.id },
+        data: { paidAmount: { increment: body.amount } },
+      });
       const updatedVoucher = await tx.feeVoucher.update({
         where: { id: voucher.id },
-        data: { paidAmount: newPaidAmount, status: computeVoucherStatus(voucher.totalPayable, newPaidAmount) },
+        data: { status: computeVoucherStatus(incremented.totalPayable, incremented.paidAmount) },
       });
       return { payment, voucher: updatedVoucher };
     });
