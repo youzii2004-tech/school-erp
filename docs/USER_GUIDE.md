@@ -237,18 +237,11 @@ dashboard lets you switch between them — the whole page updates to that child'
 ## Troubleshooting
 
 **"I clicked a link in the left menu and got a blank/error page."**
-A few of the left-menu links point to pages that weren't built as separate URLs — the
-underlying feature exists and works, it's just not wired into that particular menu item
-yet. Specifically: for **Admin**, the *Attendance*, *Fees*, *Examinations*, and *Reports*
-menu items don't currently lead anywhere — use the direct addresses given in this guide
-instead (`/admin/fees/structures`, `/admin/fees/vouchers`, `/admin/fees/defaulters`,
-`/admin/exams`, `/admin/promotions`). For **Teacher**, *My Classes* and *Announcements*
-aren't wired up (attendance and marks entry both work fine from their own menu items).
-For **Student** and **Parent**, everything lives on the single Dashboard page described
-above — the other menu items (Attendance, Fees, Results, Timetable, Announcements as
-separate pages) aren't built as separate screens in this version. This is a known gap in
-the navigation menu, not missing functionality — worth a quick fix if this system keeps
-being used (see `ARCHITECTURE.md`).
+This should no longer happen — every left-menu item now points at a real page. For
+**Student** and **Parent**, everything (attendance, fees, results, announcements) lives
+on the single Dashboard page described above; those roles don't have separate menu items
+for them because there's nothing else to navigate to. If you do hit a blank/error page,
+that's a bug worth reporting, not an expected gap.
 
 **"I forgot my password."**
 There's no self-service password reset in this version. The Admin can give you a new
