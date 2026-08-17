@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Inbox, FileText, Plus, UserPlus, Eye } from "lucide-react";
 import { toast } from "@/components/ui/toast";
 import { EnrollDialog } from "@/components/students/EnrollDialog";
+import { DocumentUploadDialog } from "@/components/students/DocumentUploadDialog";
 import { VoucherStatusBadge } from "@/components/fees/VoucherPrintView";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -960,7 +961,10 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
           </div>
         </TabsContent>
 
-        <TabsContent value="documents">
+        <TabsContent value="documents" className="space-y-4">
+          <div className="flex justify-end">
+            <DocumentUploadDialog studentId={profile.id} onUploaded={refetch} />
+          </div>
           {profile.documents.length === 0 ? (
             <Card>
               <CardContent>
@@ -984,7 +988,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
                       <TableCell>{formatDate(doc.uploadedAt)}</TableCell>
                       <TableCell className="text-right">
                         <a
-                          href={doc.filePath}
+                          href={`/api/uploads/${doc.filePath}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
