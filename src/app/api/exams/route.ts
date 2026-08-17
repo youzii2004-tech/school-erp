@@ -9,15 +9,24 @@ import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
 // trusted to supply their own classId, it's always resolved server-side from
 // session.user.id (same ownership-check pattern as Task 6/9/12: see
 // src/app/api/students/[id]/route.ts GET for the STUDENT/PARENT precedent).
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const role = session.user.role;
 
   if (role === "ADMIN") {
+    // Optional classId filter — same examSubjects-some pattern as the
+    // TEACHER/STUDENT/PARENT branches below, so callers (e.g. the marksheet
+    // page) can find "exams for this class" without an N+1 fetch. Admin still
+    // sees drafts (publishedAt not filtered) — admin is authorized to see
+    // unpublished exams; callers that need published-only filter client-side.
+    const classId = req.nextUrl.searchParams.get("classId");
     const exams = await prisma.examination.findMany({
-      where: { deletedAt: null },
+      where: {
+        deletedAt: null,
+        ...(classId ? { examSubjects: { some: { classId } } } : {}),
+      },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(exams);
