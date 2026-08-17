@@ -33,12 +33,16 @@ export async function POST(req: NextRequest) {
     const { fromSectionId, toClassId, toSectionId, toAcademicSessionId, studentIds } = body;
 
     const result = await prisma.$transaction(async (tx) => {
-      const [toClass, toSession] = await Promise.all([
+      const [toClass, toSession, toSection] = await Promise.all([
         tx.class.findUnique({ where: { id: toClassId } }),
         tx.academicSession.findUnique({ where: { id: toAcademicSessionId } }),
+        tx.section.findUnique({ where: { id: toSectionId } }),
       ]);
       if (!toClass) throw new Error("TO_CLASS_NOT_FOUND");
       if (!toSession) throw new Error("TO_SESSION_NOT_FOUND");
+      if (!toSection) throw new Error("TO_SECTION_NOT_FOUND");
+      if (toSection.classId !== toClassId) throw new Error("TO_SECTION_CLASS_MISMATCH");
+      if (toClass.sessionId !== toAcademicSessionId) throw new Error("TO_CLASS_SESSION_MISMATCH");
 
       // Conflict check runs inside this same transaction, immediately before
       // the writes below, so no concurrent request can slip a student into
@@ -49,14 +53,23 @@ export async function POST(req: NextRequest) {
       });
       if (conflicting.length > 0) throw new Error("ALREADY_ENROLLED");
 
-      // Roll numbers are "next available in that section": seed from the
-      // count already there, then bump a local counter once per insert in
-      // this loop (never re-queried) so N students promoted into the same
-      // request get consecutive numbers instead of all colliding on one
-      // count taken before any insert happened.
-      let rollCounter = await tx.enrollment.count({
-        where: { sectionId: toSectionId, academicSessionId: toAcademicSessionId },
-      });
+      // Roll numbers are "next available in that section": seed a counter from
+      // the count already there, then bump it once per insert (never re-queried)
+      // so N students promoted in one request get consecutive numbers instead of
+      // all colliding on one count taken before any insert happened. Roll numbers
+      // are free-text (EnrollDialog allows non-sequential manual entry), so a
+      // pre-existing row could already occupy the next counter value — read the
+      // existing set up front and skip past any collision rather than letting the
+      // unique constraint reject the whole batch.
+      const existingRolls = new Set(
+        (
+          await tx.enrollment.findMany({
+            where: { sectionId: toSectionId, academicSessionId: toAcademicSessionId },
+            select: { rollNumber: true },
+          })
+        ).map((e) => e.rollNumber)
+      );
+      let rollCounter = existingRolls.size;
 
       const promoted: string[] = [];
       const skipped: { studentId: string; reason: string }[] = [];
@@ -76,14 +89,20 @@ export async function POST(req: NextRequest) {
           data: { status: "PROMOTED" },
         });
 
-        rollCounter += 1;
+        let nextRoll: string;
+        do {
+          rollCounter += 1;
+          nextRoll = String(rollCounter);
+        } while (existingRolls.has(nextRoll));
+        existingRolls.add(nextRoll);
+
         await tx.enrollment.create({
           data: {
             studentId,
             academicSessionId: toAcademicSessionId,
             classId: toClassId,
             sectionId: toSectionId,
-            rollNumber: String(rollCounter),
+            rollNumber: nextRoll,
             status: "ACTIVE",
           },
         });
@@ -102,7 +121,7 @@ export async function POST(req: NextRequest) {
       }
 
       return { promoted, skipped };
-    });
+    }, { timeout: 30000 });
 
     return NextResponse.json(result, { status: 200 });
   } catch (e) {
@@ -111,9 +130,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Target class not found" }, { status: 400 });
     if ((e as Error).message === "TO_SESSION_NOT_FOUND")
       return NextResponse.json({ error: "Target session not found" }, { status: 400 });
+    if ((e as Error).message === "TO_SECTION_NOT_FOUND")
+      return NextResponse.json({ error: "Target section not found" }, { status: 400 });
+    if ((e as Error).message === "TO_SECTION_CLASS_MISMATCH")
+      return NextResponse.json({ error: "Target section does not belong to the target class" }, { status: 400 });
+    if ((e as Error).message === "TO_CLASS_SESSION_MISMATCH")
+      return NextResponse.json({ error: "Target class does not belong to the target session" }, { status: 400 });
     if ((e as Error).message === "ALREADY_ENROLLED")
       return NextResponse.json(
         { error: "One or more selected students already have an enrollment in the target session" },
+        { status: 409 }
+      );
+    if ((e as { code?: string }).code === "P2002")
+      return NextResponse.json(
+        { error: "A roll-number or enrollment conflict occurred while saving — please retry" },
         { status: 409 }
       );
     return NextResponse.json({ error: "Could not process promotion" }, { status: 500 });
