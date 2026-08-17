@@ -136,41 +136,22 @@ further writes regardless of role — Admin included.
 
 ---
 
-## Known gap: sidebar navigation vs. actual routes
+## Resolved: sidebar navigation vs. actual routes
 
-Worth flagging explicitly for whoever picks this up next, because it affects real
-day-to-day usability, not just internal code tidiness.
-
-`src/components/layout/Sidebar.tsx` was written in an early scaffolding task with
-placeholder `href`s for pages that didn't exist yet (its own code comment says as much:
-*"the rest are placeholders future tasks... will fill in"*). Later tasks built the real
-pages at different paths and never came back to update the sidebar. As of this task, the
-following sidebar links lead nowhere (404):
-
-- **Admin:** *Attendance* (`/admin/attendance`), *Fees* (`/admin/fees`), *Examinations*
-  (`/admin/examinations`), *Reports* (`/admin/reports`) — the real pages are
-  `/admin/fees/structures`, `/admin/fees/vouchers`, `/admin/fees/defaulters`,
-  `/admin/exams`. There is also no dedicated Admin-facing attendance-marking page at all
-  (attendance marking is only wired up for Teacher) and no dedicated `/admin/reports`
-  page — the closest equivalent is the fee Defaulters view plus the Students page's CSV
-  export. `/admin/promotions` (a real, working page) isn't in the sidebar at all.
-- **Teacher:** *My Classes* (`/teacher/classes`) and *Announcements*
-  (`/teacher/announcements`) are unwired; Attendance, Marks Entry, and Timetable are all
-  correct and working.
-- **Student / Parent:** every sidebar item beyond *Dashboard* (Attendance, Fees, Results,
-  Timetable, Announcements, My Children) points at a page that was never built as a
-  separate route — Task 22 instead built one consolidated dashboard
-  (`StudentSummaryWidgets` + `AnnouncementFeed`) that shows all of that on a single page.
-  The sidebar was never trimmed to match.
-
-None of this is a data or permission bug — every underlying feature works correctly when
-reached by its real URL (all of Task 27's 29 HTTP smoke-test scenarios passed against the
-real routes). It's purely a client-side navigation-menu mismatch. `docs/USER_GUIDE.md`
-documents the real, working URLs as a stopgap. **The actual fix is small** — update the
-`href`s in `NAV.ADMIN`/`NAV.TEACHER` in `src/components/layout/Sidebar.tsx` to the real
-paths above, add a `Promotions` entry, and either build thin `/student|parent/attendance`
-etc. redirect pages or (simpler) prune those sidebar entries down to match the single
-consolidated dashboard that already exists.
+`src/components/layout/Sidebar.tsx` originally shipped (Task 5) with placeholder `href`s
+for pages that didn't exist yet, and was never updated as later tasks built the real
+pages at different paths. This was caught by Task 28's documentation review (verifying
+every UI claim against real source surfaced the mismatch) and fixed directly:
+Admin's *Fees* is now a submenu pointing at the three real fee pages
+(`/admin/fees/structures`, `/admin/fees/vouchers`, `/admin/fees/defaulters`),
+*Examinations* points at `/admin/exams`, a *Promotions* entry was added
+(`/admin/promotions`), and *Attendance*/*Reports* were removed (no such Admin-facing
+pages exist — attendance marking is Teacher-only, and CSV export lives on the Students
+page). Teacher's *My Classes*/*Announcements* and Student/Parent's every-item-but-Dashboard
+were removed since that content was consolidated onto a single dashboard page per role
+(Task 22) and was never built as separate routes. Every remaining `href` in `NAV` is
+verified against a real `page.tsx`. See the SDD ledger's Task 28 entry for the full
+before/after link table.
 
 ---
 
