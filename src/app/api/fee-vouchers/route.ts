@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { VoucherStatus } from "@prisma/client";
 import { feeVoucherCreateSchema } from "@/lib/validation/fee";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
 import { computeVoucherStatus, nextVoucherNumber } from "@/lib/fee-calc";
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
     where: {
       deletedAt: null,
       ...(studentIdFilter ? { studentId: studentIdFilter } : {}),
-      ...(status ? { status: status as any } : {}),
+      ...(status ? { status: status as VoucherStatus } : {}),
     },
     include: { student: true },
     orderBy: { createdAt: "desc" },

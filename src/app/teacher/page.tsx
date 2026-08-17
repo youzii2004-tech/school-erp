@@ -159,7 +159,7 @@ export default function TeacherDashboardPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CalendarCheck className="size-4 text-primary" />
-                  Today's Attendance
+                  Today&apos;s Attendance
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 pt-2">
@@ -170,7 +170,7 @@ export default function TeacherDashboardPage() {
                 ) : (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      Pick a section on the attendance page to mark today's attendance:
+                      Pick a section on the attendance page to mark today&apos;s attendance:
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {mySections.map((c) => (
@@ -188,7 +188,7 @@ export default function TeacherDashboardPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="size-4 text-primary" />
-                  Today's Timetable — {DAY_NAMES[new Date().getDay()]}
+                  Today&apos;s Timetable — {DAY_NAMES[new Date().getDay()]}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 pt-2">

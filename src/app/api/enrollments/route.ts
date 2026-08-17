@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(enrollment, { status: 201 });
   } catch (e) {
     if (e instanceof ValidationError) return NextResponse.json({ error: e.issues }, { status: 400 });
-    if ((e as any).code === "P2002")
+    if ((e as { code?: string }).code === "P2002")
       return NextResponse.json(
         { error: "Student already has an active enrollment this session, or roll number is taken in this section" },
         { status: 409 }
