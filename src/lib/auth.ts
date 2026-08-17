@@ -36,11 +36,27 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.role = (user as { role?: string }).role;
+      if (user) {
+        token.role = (user as { role?: string }).role;
+        // authorize() returns { id, ... } as `user.id`; NextAuth also mirrors
+        // this onto token.sub, but persisting it explicitly on the token
+        // avoids depending on that implicit behavior across NextAuth versions.
+        token.id = (user as { id?: string }).id;
+      }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) (session.user as { role?: unknown }).role = token.role;
+      if (session.user) {
+        (session.user as { role?: unknown }).role = token.role;
+        // Every route that resolves "my own record" (Student/Teacher
+        // findUnique by userId) or stamps "who did this" (markedById,
+        // enteredById, recordedById, createdById) reads session.user.id.
+        // Without this line it stayed undefined at runtime despite being
+        // typed as a required string in src/types/next-auth.d.ts, so those
+        // Prisma calls threw PrismaClientValidationError and surfaced as a
+        // bare 500 — found via Task 27's HTTP smoke test.
+        (session.user as { id?: unknown }).id = token.id ?? token.sub;
+      }
       return session;
     },
   },
