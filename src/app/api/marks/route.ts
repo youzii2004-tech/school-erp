@@ -21,6 +21,16 @@ export async function POST(req: NextRequest) {
       include: { examination: true },
     });
     if (!examSubject) return NextResponse.json({ error: "Exam subject not found" }, { status: 404 });
+    if (session!.user.role === "TEACHER") {
+      const teacher = await prisma.teacher.findUnique({ where: { userId: session!.user.id } });
+      const assigned = teacher
+        ? await prisma.teacherSubject.findFirst({
+            where: { teacherId: teacher.id, subjectId: examSubject.subjectId, classId: examSubject.classId },
+          })
+        : null;
+      if (!assigned)
+        return NextResponse.json({ error: "You are not assigned to this class/subject" }, { status: 403 });
+    }
     if (examSubject.examination.publishedAt)
       return NextResponse.json({ error: "Results are published and locked for this exam" }, { status: 409 });
     if (body.entries.some((e) => e.obtainedMarks > examSubject.totalMarks))
