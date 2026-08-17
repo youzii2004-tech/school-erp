@@ -16,6 +16,7 @@ import {
   BarChart3,
   ChevronDown,
   School,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +58,7 @@ const NAV: Record<Role, NavItem[]> = {
     { label: "Timetable", href: "/admin/timetable", icon: CalendarDays },
     { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
     { label: "Reports", href: "/admin/reports", icon: BarChart3 },
+    { label: "Settings", href: "/admin/settings", icon: Settings },
   ],
   TEACHER: [
     { label: "Dashboard", href: "/teacher", icon: LayoutDashboard },

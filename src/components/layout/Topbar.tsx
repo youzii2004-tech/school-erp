@@ -1,15 +1,17 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-// Task 26 will add a real `/api/settings/institute` GET backed by the Setting table.
-// Until that lands, read a build-time env var with a sensible static fallback —
-// per the controller's ruling, do not stub the endpoint or block this task on it.
-const INSTITUTE_NAME = process.env.NEXT_PUBLIC_INSTITUTE_NAME || "School ERP";
+// Task 25 added a real, unauthenticated GET /api/settings/institute backed by
+// the Setting table (src/lib/settings.ts). Fetch it client-side and fall back
+// to the same static name used before if the setting is unset/empty or the
+// request fails, so this never renders blank.
+const FALLBACK_INSTITUTE_NAME = process.env.NEXT_PUBLIC_INSTITUTE_NAME || "School ERP";
 
 function initials(name?: string | null) {
   if (!name) return "?";
@@ -23,11 +25,27 @@ function initials(name?: string | null) {
 export function Topbar() {
   const { data: session } = useSession();
   const user = session?.user;
+  const [instituteName, setInstituteName] = useState(FALLBACK_INSTITUTE_NAME);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/settings/institute")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.name) setInstituteName(data.name);
+      })
+      .catch(() => {
+        // Keep the fallback name — this must never block rendering the Topbar.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-6">
       <span className="font-heading text-sm font-semibold text-foreground">
-        {INSTITUTE_NAME}
+        {instituteName}
       </span>
 
       <div className="flex items-center gap-3">
