@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
-import { ArrowLeft, Inbox, CheckCircle2, Plus } from "lucide-react";
+import { ArrowLeft, Inbox, CheckCircle2, Plus, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Matches GET /api/exams/[id] (Task 14) — Examination with `session` and
@@ -366,7 +366,13 @@ export default function ExamDetailPage({ params }: { params: Promise<{ id: strin
                 {exam.type} · {exam.session.name}
               </p>
             </div>
-            <PublishDialog exam={exam} onPublished={() => setRefreshCount((c) => c + 1)} />
+            <div className="flex items-center gap-2">
+              <Button variant="outline" render={<Link href={`/admin/exams/${exam.id}/results`} />}>
+                <ClipboardList />
+                View Results
+              </Button>
+              <PublishDialog exam={exam} onPublished={() => setRefreshCount((c) => c + 1)} />
+            </div>
           </div>
 
           <div className="flex items-center justify-between gap-4">

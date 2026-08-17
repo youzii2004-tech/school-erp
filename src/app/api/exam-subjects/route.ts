@@ -5,6 +5,26 @@ import { prisma } from "@/lib/prisma";
 import { examSubjectCreateSchema } from "@/lib/validation/exam";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
 
+// Added for Task 16 (marks entry UI): Task 14 only shipped POST for this route.
+// Any authenticated role may read — TEACHER needs it to populate the marks-entry
+// exam-subject picker (further scoped client-side via /api/teacher-subjects),
+// ADMIN/others may browse freely. Includes `examination` alongside `subject` so
+// callers can read `examSubject.examination.publishedAt` for the locked banner
+// without a second request.
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const examinationId = req.nextUrl.searchParams.get("examinationId");
+  if (!examinationId) return NextResponse.json({ error: "examinationId is required" }, { status: 400 });
+
+  const examSubjects = await prisma.examSubject.findMany({
+    where: { examinationId, deletedAt: null },
+    include: { subject: true, examination: true },
+  });
+  return NextResponse.json(examSubjects);
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!requireRole(session, ["ADMIN"]))

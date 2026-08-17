@@ -5,6 +5,34 @@ import { prisma } from "@/lib/prisma";
 import { enrollmentCreateSchema } from "@/lib/validation/enrollment";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
 
+// Added for Task 16 (marks entry UI): no GET existed on this route. ExamSubject
+// only carries a classId (not a sectionId), so the marks-entry roster needs every
+// active student across all sections of a class — the sectionId-scoped roster
+// query in GET /api/attendance (src/app/api/attendance/route.ts) doesn't fit here.
+// Same shape/ordering convention as that route: rollNumber-sorted, plain
+// {studentId, rollNumber, fullName} rows.
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!requireRole(session, ["ADMIN", "TEACHER"]))
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const classId = req.nextUrl.searchParams.get("classId");
+  if (!classId) return NextResponse.json({ error: "classId is required" }, { status: 400 });
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { classId, status: "ACTIVE" },
+    include: { student: true },
+    orderBy: { rollNumber: "asc" },
+  });
+  return NextResponse.json(
+    enrollments.map((e) => ({
+      studentId: e.studentId,
+      rollNumber: e.rollNumber,
+      fullName: e.student.fullName,
+    }))
+  );
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!requireRole(session, ["ADMIN"]))
