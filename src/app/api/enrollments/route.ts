@@ -17,10 +17,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const classId = req.nextUrl.searchParams.get("classId");
-  if (!classId) return NextResponse.json({ error: "classId is required" }, { status: 400 });
+  // Added for Task 21 (promotion workflow): the from-section roster needs to be
+  // scoped to one section, not every section of a class. sectionId narrows the
+  // classId-scoped query above rather than replacing it, so existing callers
+  // (Task 16 marks entry, classId only) are unaffected.
+  const sectionId = req.nextUrl.searchParams.get("sectionId");
+  if (!classId && !sectionId)
+    return NextResponse.json({ error: "classId or sectionId is required" }, { status: 400 });
 
   const enrollments = await prisma.enrollment.findMany({
-    where: { classId, status: "ACTIVE" },
+    where: {
+      ...(classId ? { classId } : {}),
+      ...(sectionId ? { sectionId } : {}),
+      status: "ACTIVE",
+    },
     include: { student: true },
     orderBy: { rollNumber: "asc" },
   });

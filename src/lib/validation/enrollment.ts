@@ -8,6 +8,17 @@ export const enrollmentCreateSchema = z.object({
   rollNumber: z.string().min(1),
 });
 
+// Task 21: bulk class promotion. fromSectionId identifies the roster's current
+// section (its session is read off each student's own ACTIVE enrollment there,
+// not passed separately — see src/app/api/promotions/route.ts).
+export const promotionCreateSchema = z.object({
+  fromSectionId: z.string().min(1),
+  toClassId: z.string().min(1),
+  toSectionId: z.string().min(1),
+  toAcademicSessionId: z.string().min(1),
+  studentIds: z.array(z.string().min(1)).min(1),
+});
+
 export const guardianCreateSchema = z.object({
   fullName: z.string().min(1),
   relation: z.string().min(1),
