@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { calculateGrade, calculatePositions } from "@/lib/grading";
+import { calculateGrade, calculatePositions, DEFAULT_GRADE_BANDS } from "@/lib/grading";
+import { getSetting } from "@/lib/settings";
 
 // Design choice: a student with no Mark row for a given ExamSubject has that
 // subject EXCLUDED from their total/totalMax (not treated as obtained=0).
@@ -17,6 +18,10 @@ import { calculateGrade, calculatePositions } from "@/lib/grading";
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Task 25: read the admin-configured grade bands (Settings UI) instead of
+  // always using DEFAULT_GRADE_BANDS, so that UI is not cosmetic-only.
+  const gradeBands = await getSetting("gradeBands", DEFAULT_GRADE_BANDS);
 
   const examinationId = req.nextUrl.searchParams.get("examinationId");
   const classId = req.nextUrl.searchParams.get("classId");
@@ -85,7 +90,7 @@ export async function GET(req: NextRequest) {
     const total = subjects.reduce((sum, s) => sum + s.obtained, 0);
     const totalMax = subjects.reduce((sum, s) => sum + s.total, 0);
     const percentage = totalMax > 0 ? (total / totalMax) * 100 : 0;
-    const grade = calculateGrade(percentage);
+    const grade = calculateGrade(percentage, gradeBands);
     return {
       studentId: e.studentId,
       fullName: e.student.fullName,
