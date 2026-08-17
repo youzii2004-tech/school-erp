@@ -72,32 +72,36 @@ export async function GET(req: NextRequest) {
     include: { student: true },
   });
 
-  const rows = roster
-    .filter((e) => !allowedStudentIds || allowedStudentIds.has(e.studentId))
-    .map((e) => {
-      const studentMarks = marksByStudent.get(e.studentId) ?? [];
-      const subjects = studentMarks.map((m) => {
-        const es = examSubjectById.get(m.examSubjectId)!;
-        return { subjectName: es.subject.name, obtained: m.obtainedMarks, total: es.totalMarks };
-      });
-      const total = subjects.reduce((sum, s) => sum + s.obtained, 0);
-      const totalMax = subjects.reduce((sum, s) => sum + s.total, 0);
-      const percentage = totalMax > 0 ? (total / totalMax) * 100 : 0;
-      const grade = calculateGrade(percentage);
-      return {
-        studentId: e.studentId,
-        fullName: e.student.fullName,
-        total,
-        totalMax,
-        percentage,
-        grade,
-        subjects,
-      };
+  // Positions are computed across the FULL class roster first, so a STUDENT
+  // or PARENT viewer still sees their true class-wide rank (not a rank among
+  // only the row(s) they're allowed to see). The visibility filter is applied
+  // afterward, only to which rows are returned in the response.
+  const allRows = roster.map((e) => {
+    const studentMarks = marksByStudent.get(e.studentId) ?? [];
+    const subjects = studentMarks.map((m) => {
+      const es = examSubjectById.get(m.examSubjectId)!;
+      return { subjectName: es.subject.name, obtained: m.obtainedMarks, total: es.totalMarks };
     });
+    const total = subjects.reduce((sum, s) => sum + s.obtained, 0);
+    const totalMax = subjects.reduce((sum, s) => sum + s.total, 0);
+    const percentage = totalMax > 0 ? (total / totalMax) * 100 : 0;
+    const grade = calculateGrade(percentage);
+    return {
+      studentId: e.studentId,
+      fullName: e.student.fullName,
+      total,
+      totalMax,
+      percentage,
+      grade,
+      subjects,
+    };
+  });
 
-  const positions = calculatePositions(rows.map((r) => ({ studentId: r.studentId, total: r.total })));
+  const positions = calculatePositions(allRows.map((r) => ({ studentId: r.studentId, total: r.total })));
 
-  const result = rows.map((r) => ({ ...r, position: positions.get(r.studentId) ?? null }));
+  const result = allRows
+    .filter((r) => !allowedStudentIds || allowedStudentIds.has(r.studentId))
+    .map((r) => ({ ...r, position: positions.get(r.studentId) ?? null }));
 
   return NextResponse.json(result);
 }
