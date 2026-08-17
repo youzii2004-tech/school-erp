@@ -16,7 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Inbox, Search, Eye } from "lucide-react";
+import { Inbox, Search, Eye, Upload, Download } from "lucide-react";
 import { StudentFormDialog } from "@/components/students/StudentFormDialog";
 
 type Student = {
@@ -92,7 +92,21 @@ export default function StudentsPage() {
             All enrolled and past students in the system.
           </p>
         </div>
-        <StudentFormDialog onCreated={() => setRefreshCount((c) => c + 1)} />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" render={<Link href="/admin/students/import" />}>
+            <Upload />
+            Import
+          </Button>
+          {/* Plain <a> triggers a browser download via the route's
+              Content-Disposition: attachment header (Task 24 Step 7) — no
+              fetch+blob dance needed; this codebase has no existing
+              download-via-fetch pattern to reuse (checked uploads route). */}
+          <Button variant="outline" size="sm" render={<a href="/api/students/export" />}>
+            <Download />
+            Export
+          </Button>
+          <StudentFormDialog onCreated={() => setRefreshCount((c) => c + 1)} />
+        </div>
       </div>
 
       <div className="relative max-w-sm">
