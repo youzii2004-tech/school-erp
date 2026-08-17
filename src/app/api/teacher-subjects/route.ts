@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(assignment, { status: 201 });
   } catch (e) {
     if (e instanceof ValidationError) return NextResponse.json({ error: e.issues }, { status: 400 });
-    if ((e as any).code === "P2002")
+    if ((e as { code?: string }).code === "P2002")
       return NextResponse.json({ error: "This teacher is already assigned to this subject/class/section" }, { status: 409 });
     return NextResponse.json({ error: "Could not create assignment" }, { status: 500 });
   }

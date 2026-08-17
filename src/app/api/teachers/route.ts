@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(teacher, { status: 201 });
   } catch (e) {
     if (e instanceof ValidationError) return NextResponse.json({ error: e.issues }, { status: 400 });
-    if ((e as any).code === "P2002") return NextResponse.json({ error: "Email or username already in use" }, { status: 409 });
+    if ((e as { code?: string }).code === "P2002") return NextResponse.json({ error: "Email or username already in use" }, { status: 409 });
     return NextResponse.json({ error: "Could not create teacher" }, { status: 500 });
   }
 }

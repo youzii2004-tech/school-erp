@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { z, ZodSchema } from "zod";
+import { ZodSchema } from "zod";
 import { authOptions, requireRole } from "@/lib/auth";
 
 export class ValidationError extends Error {

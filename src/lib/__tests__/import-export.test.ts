@@ -1,7 +1,7 @@
 import { parseStudentRows } from "../import-export";
 import * as XLSX from "xlsx";
 
-function makeSheetBuffer(rows: Record<string, any>[]) {
+function makeSheetBuffer(rows: Record<string, unknown>[]) {
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Students");

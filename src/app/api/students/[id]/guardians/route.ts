@@ -20,7 +20,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json(link, { status: 201 });
   } catch (e) {
     if (e instanceof ValidationError) return NextResponse.json({ error: e.issues }, { status: 400 });
-    if ((e as any).code === "P2002")
+    if ((e as { code?: string }).code === "P2002")
       return NextResponse.json({ error: "This guardian is already linked to this student" }, { status: 409 });
     return NextResponse.json({ error: "Could not link guardian" }, { status: 500 });
   }

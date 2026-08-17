@@ -30,7 +30,7 @@ export default function SectionsPage() {
         <div>
           <h1 className="font-heading text-2xl font-semibold">Sections</h1>
           <p className="text-sm text-muted-foreground">
-            Sections within each class, e.g. "A", "B".
+            Sections within each class, e.g. &quot;A&quot;, &quot;B&quot;.
           </p>
         </div>
         <EntityFormDialog
