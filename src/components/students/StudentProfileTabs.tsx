@@ -609,6 +609,114 @@ function FeeHistoryTab({ studentId }: { studentId: string }) {
   );
 }
 
+// Matches GET /api/exams (Task 14, ADMIN branch — this component is admin-only)
+// with the classId filter added for Task 17, and GET /api/results (Task 15) used
+// to confirm the student actually has marks entered.
+type ExamRow = { id: string; name: string; type: string; publishedAt: string | null };
+
+function ExamResultsTab({ studentId, classId }: { studentId: string; classId: string | null }) {
+  const [loading, setLoading] = useState(true);
+  const [exams, setExams] = useState<ExamRow[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!classId) {
+      setExams([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+
+    (async () => {
+      try {
+        const examsRes = await fetch(`/api/exams?classId=${classId}`);
+        const allExams: ExamRow[] = examsRes.ok ? await examsRes.json() : [];
+        // ADMIN branch returns drafts too (admin is authorized to see them) —
+        // filter to published-only here, since this tab is explicitly "published
+        // exams" per the task brief.
+        const published = allExams.filter((e) => e.publishedAt !== null);
+
+        // "the student has results for" — a published exam can still have zero
+        // Mark rows (publishing has no completeness check), so confirm this
+        // student actually has at least one subject mark on each candidate exam
+        // before listing it, rather than assuming published implies graded.
+        const checks = await Promise.all(
+          published.map(async (exam) => {
+            const res = await fetch(`/api/results?examinationId=${exam.id}&classId=${classId}`);
+            if (!res.ok) return null;
+            const rows: { studentId: string; subjects: unknown[] }[] = await res.json();
+            const row = rows.find((r) => r.studentId === studentId);
+            return row && row.subjects.length > 0 ? exam : null;
+          })
+        );
+        if (!cancelled) setExams(checks.filter((e): e is ExamRow => e !== null));
+      } catch {
+        if (!cancelled) setExams([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId, classId]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="space-y-2 pt-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-8 w-full animate-pulse rounded-md bg-muted" />
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (exams.length === 0) {
+    return (
+      <Card>
+        <CardContent>
+          <EmptyState label="No published exam results yet" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="py-0">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Exam</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {exams.map((exam) => (
+            <TableRow key={exam.id}>
+              <TableCell className="font-medium">{exam.name}</TableCell>
+              <TableCell className="text-muted-foreground">{exam.type.replace("_", " ")}</TableCell>
+              <TableCell className="text-right">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  render={<Link href={`/admin/students/${studentId}/marksheet/${exam.id}`} />}
+                >
+                  <Eye />
+                  View Marksheet
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Card>
+  );
+}
+
 export function StudentProfileTabs({ student }: { student: StudentProfile }) {
   // Local copy so this component can refresh itself after enroll / guardian-link
   // actions without requiring the parent page to pass a refetch callback (the
@@ -659,6 +767,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="fees">Fee History</TabsTrigger>
+          <TabsTrigger value="exams">Examination Results</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -898,6 +1007,10 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
 
         <TabsContent value="fees">
           <FeeHistoryTab studentId={profile.id} />
+        </TabsContent>
+
+        <TabsContent value="exams">
+          <ExamResultsTab studentId={profile.id} classId={latestEnrollment?.class.id ?? null} />
         </TabsContent>
       </Tabs>
     </div>
