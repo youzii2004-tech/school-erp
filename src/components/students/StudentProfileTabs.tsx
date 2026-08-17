@@ -25,10 +25,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Inbox, FileText, Plus, UserPlus } from "lucide-react";
+import { Inbox, FileText, Plus, UserPlus, Eye } from "lucide-react";
 import { toast } from "@/components/ui/toast";
 import { EnrollDialog } from "@/components/students/EnrollDialog";
+import { VoucherStatusBadge } from "@/components/fees/VoucherPrintView";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 // Shape matches the include on GET /api/students/[id] (Task 6):
 // guardianLinks -> guardian, enrollments -> class/section/session (desc by createdAt),
@@ -514,6 +516,99 @@ function AttendanceTab({ studentId }: { studentId: string }) {
   );
 }
 
+// Matches GET /api/fee-vouchers?studentId=<id> (Task 12) — plain FeeVoucher rows
+// with `student` included; only the fields this tab renders are typed here.
+type FeeVoucherRow = {
+  id: string;
+  voucherNumber: string;
+  billingMonth: string;
+  totalPayable: number;
+  paidAmount: number;
+  status: string;
+};
+
+function FeeHistoryTab({ studentId }: { studentId: string }) {
+  const [loading, setLoading] = useState(true);
+  const [vouchers, setVouchers] = useState<FeeVoucherRow[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch(`/api/fee-vouchers?studentId=${studentId}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (!cancelled) setVouchers(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setVouchers([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="space-y-2 pt-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-8 w-full animate-pulse rounded-md bg-muted" />
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (vouchers.length === 0) {
+    return (
+      <Card>
+        <CardContent>
+          <EmptyState label="No fee vouchers yet" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="py-0">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Voucher #</TableHead>
+            <TableHead>Billing Month</TableHead>
+            <TableHead>Total Payable</TableHead>
+            <TableHead>Paid</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {vouchers.map((v) => (
+            <TableRow key={v.id}>
+              <TableCell className="font-medium">{v.voucherNumber}</TableCell>
+              <TableCell className="text-muted-foreground">{v.billingMonth}</TableCell>
+              <TableCell>{`Rs. ${v.totalPayable.toFixed(2)}`}</TableCell>
+              <TableCell>{`Rs. ${v.paidAmount.toFixed(2)}`}</TableCell>
+              <TableCell>
+                <VoucherStatusBadge status={v.status} />
+              </TableCell>
+              <TableCell className="text-right">
+                <Button variant="ghost" size="sm" render={<Link href={`/admin/fees/vouchers/${v.id}`} />}>
+                  <Eye />
+                  View
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Card>
+  );
+}
+
 export function StudentProfileTabs({ student }: { student: StudentProfile }) {
   // Local copy so this component can refresh itself after enroll / guardian-link
   // actions without requiring the parent page to pass a refetch callback (the
@@ -563,6 +658,7 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
           <TabsTrigger value="history">Class / Promotion / Transfer</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
+          <TabsTrigger value="fees">Fee History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -798,6 +894,10 @@ export function StudentProfileTabs({ student }: { student: StudentProfile }) {
 
         <TabsContent value="attendance">
           <AttendanceTab studentId={profile.id} />
+        </TabsContent>
+
+        <TabsContent value="fees">
+          <FeeHistoryTab studentId={profile.id} />
         </TabsContent>
       </Tabs>
     </div>
