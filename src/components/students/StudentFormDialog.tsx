@@ -170,6 +170,7 @@ export function StudentFormDialog({ onCreated, trigger }: StudentFormDialogProps
                 <Label htmlFor={field.name}>{field.label}</Label>
                 {field.type === "select" ? (
                   <Select
+                    items={GENDER_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
                     value={values[field.name] ?? ""}
                     onValueChange={(v) => handleChange(field.name, v as string)}
                   >

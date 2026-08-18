@@ -115,7 +115,11 @@ export function DocumentUploadDialog({ studentId, onUploaded }: DocumentUploadDi
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="doc-type">Document Type</Label>
-            <Select value={type} onValueChange={(v) => setType(v as string)}>
+            <Select
+              items={DOCUMENT_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+              value={type}
+              onValueChange={(v) => setType(v as string)}
+            >
               <SelectTrigger id="doc-type" className="w-full">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
