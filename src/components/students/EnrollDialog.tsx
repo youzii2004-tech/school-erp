@@ -156,6 +156,10 @@ export function EnrollDialog({ studentId, onEnrolled, trigger }: EnrollDialogPro
           <div className="space-y-1.5">
             <Label htmlFor="session">Session</Label>
             <Select
+              items={sessions.map((s) => ({
+                value: s.id,
+                label: `${s.name}${s.isCurrent ? " (Current)" : ""}`,
+              }))}
               value={sessionId}
               onValueChange={(v) => {
                 setSessionId(v as string);
@@ -181,6 +185,7 @@ export function EnrollDialog({ studentId, onEnrolled, trigger }: EnrollDialogPro
           <div className="space-y-1.5">
             <Label htmlFor="class">Class</Label>
             <Select
+              items={filteredClasses.map((c) => ({ value: c.id, label: c.name }))}
               value={classId}
               onValueChange={(v) => {
                 setClassId(v as string);
@@ -203,7 +208,12 @@ export function EnrollDialog({ studentId, onEnrolled, trigger }: EnrollDialogPro
 
           <div className="space-y-1.5">
             <Label htmlFor="section">Section</Label>
-            <Select value={sectionId} onValueChange={(v) => setSectionId(v as string)} disabled={loadingOptions || !classId}>
+            <Select
+              items={filteredSections.map((s) => ({ value: s.id, label: s.name }))}
+              value={sectionId}
+              onValueChange={(v) => setSectionId(v as string)}
+              disabled={loadingOptions || !classId}
+            >
               <SelectTrigger id="section" className="w-full">
                 <SelectValue placeholder="Select section" />
               </SelectTrigger>
