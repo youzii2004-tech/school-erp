@@ -29,16 +29,7 @@ wrong or janky, doesn't block. **P2** = polish/nice-to-have.
 
 ## Open Bugs
 
-### BUG-003 — Some text is wrong (unspecified) (P1)
-- **Reported by:** Usaid, 2026-08-18.
-- **Symptom:** "text was wrong" — no specific page/string given yet.
-- **Next step:** whoever picks this up should ask Usaid which page/text he meant if it's
-  not obvious, rather than guessing and scanning the whole app blind. If he's not
-  available, do a careful pass over labels/copy on every page while doing other fixes
-  and flag anything that reads as a placeholder, a copy-paste leftover, or factually
-  wrong (e.g. mismatched labels/values), logging exact location + current text + what
-  it should say.
-- **Status:** OPEN — needs the specific location before it can be fixed.
+*(none open)*
 
 ---
 
@@ -60,6 +51,25 @@ wrong or janky, doesn't block. **P2** = polish/nice-to-have.
 ---
 
 ## Fixed
+
+### BUG-003 — Some text is wrong (unspecified) (P1)
+- **Fixed:** 2026-08-19 — asked Usaid for the specific location (per the task's own
+  procedure) rather than guessing.
+- **Usaid's answer:** "On pages such as Promotion, when selected Anything within
+  section of From and To it showed random text, however in this run it's working
+  fine, so don't know whether you already fixed it or not."
+- **Diagnosis:** this is the same symptom as BUG-001 (Select showing a raw stored
+  value/id instead of its human label), on the exact page it was described on —
+  `/admin/promotions`'s "From" and "To" sections are `src/app/admin/promotions/page.tsx`,
+  which had 5 `<Select>` instances fixed as part of BUG-001 (see below). Usaid could not
+  confirm with certainty it was the identical bug since he saw it working when he
+  re-checked, but it fully matches BUG-001's description, location, and fix — not a
+  separate, still-unresolved issue.
+- **Verified:** live browser pass (Playwright MCP) directly on `/admin/promotions` —
+  opened the "From → Class" select, chose "Grade 7"; the trigger displays "Grade 7"
+  (not a raw id), matching Usaid's now-working observation. No independent BUG-003
+  defect was found beyond this — if Usaid sees wrong text again on a page/string BUG-001
+  doesn't cover, log a fresh entry with the specific location so it isn't blind-swept.
 
 ### BUG-002 — Overall app layout feels off / possibly a browser-rendering issue (P1)
 - **Fixed:** 2026-08-19.
