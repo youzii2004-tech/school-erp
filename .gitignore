@@ -55,3 +55,6 @@ skills-lock.json
 next-env.d.ts
 
 /src/generated/prisma
+
+# Subagent-driven-development scratch workspace (ledgers, briefs, review packages)
+/.superpowers/
