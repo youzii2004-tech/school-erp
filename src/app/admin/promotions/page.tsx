@@ -310,7 +310,11 @@ export default function PromotionsPage() {
                 </h2>
                 <div className="space-y-1.5">
                   <Label htmlFor="fromClass">Class</Label>
-                  <Select value={fromClassId} onValueChange={(v) => setFromClassId(v as string)}>
+                  <Select
+                    items={fromClasses.map((c) => ({ value: c.id, label: c.name }))}
+                    value={fromClassId}
+                    onValueChange={(v) => setFromClassId(v as string)}
+                  >
                     <SelectTrigger id="fromClass" className="w-full">
                       <SelectValue placeholder="Select class" />
                     </SelectTrigger>
@@ -326,6 +330,7 @@ export default function PromotionsPage() {
                 <div className="space-y-1.5">
                   <Label htmlFor="fromSection">Section</Label>
                   <Select
+                    items={fromSections.map((s) => ({ value: s.id, label: s.name }))}
                     value={fromSectionId}
                     onValueChange={(v) => setFromSectionId(v as string)}
                     disabled={!fromClassId}
@@ -348,7 +353,11 @@ export default function PromotionsPage() {
                 <h2 className="text-sm font-semibold text-muted-foreground">To</h2>
                 <div className="space-y-1.5">
                   <Label htmlFor="toSession">Session</Label>
-                  <Select value={toSessionId} onValueChange={(v) => setToSessionId(v as string)}>
+                  <Select
+                    items={sessions.map((s) => ({ value: s.id, label: s.name }))}
+                    value={toSessionId}
+                    onValueChange={(v) => setToSessionId(v as string)}
+                  >
                     <SelectTrigger id="toSession" className="w-full">
                       <SelectValue placeholder="Select session" />
                     </SelectTrigger>
@@ -363,7 +372,12 @@ export default function PromotionsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="toClass">Class</Label>
-                  <Select value={toClassId} onValueChange={(v) => setToClassId(v as string)} disabled={!toSessionId}>
+                  <Select
+                    items={toClasses.map((c) => ({ value: c.id, label: c.name }))}
+                    value={toClassId}
+                    onValueChange={(v) => setToClassId(v as string)}
+                    disabled={!toSessionId}
+                  >
                     <SelectTrigger id="toClass" className="w-full">
                       <SelectValue placeholder="Select class" />
                     </SelectTrigger>
@@ -378,7 +392,12 @@ export default function PromotionsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="toSection">Section</Label>
-                  <Select value={toSectionId} onValueChange={(v) => setToSectionId(v as string)} disabled={!toClassId}>
+                  <Select
+                    items={toSections.map((s) => ({ value: s.id, label: s.name }))}
+                    value={toSectionId}
+                    onValueChange={(v) => setToSectionId(v as string)}
+                    disabled={!toClassId}
+                  >
                     <SelectTrigger id="toSection" className="w-full">
                       <SelectValue placeholder="Select section" />
                     </SelectTrigger>

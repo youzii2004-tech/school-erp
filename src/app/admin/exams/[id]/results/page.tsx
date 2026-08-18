@@ -115,7 +115,11 @@ export default function ExamResultsPage({ params }: { params: Promise<{ id: stri
             </div>
             <div className="ml-auto space-y-1.5">
               <label className="text-xs text-muted-foreground">Class</label>
-              <Select value={classId} onValueChange={(v) => setClassId(v ?? "")}>
+              <Select
+                items={availableClasses.map((c) => ({ value: c.id, label: c.name }))}
+                value={classId}
+                onValueChange={(v) => setClassId(v ?? "")}
+              >
                 <SelectTrigger className="w-56">
                   <SelectValue placeholder="Select a class" />
                 </SelectTrigger>
