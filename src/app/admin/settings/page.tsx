@@ -283,7 +283,14 @@ export default function SettingsPage() {
               <h2 className="font-heading text-lg font-medium">Current Session</h2>
               <div className="max-w-xs space-y-1.5">
                 <Label htmlFor="currentSession">Academic Session</Label>
-                <Select value={selectedSessionId} onValueChange={(v) => setSelectedSessionId(v as string)}>
+                <Select
+                  items={sessions.map((s) => ({
+                    value: s.id,
+                    label: `${s.name}${s.isCurrent ? " (current)" : ""}`,
+                  }))}
+                  value={selectedSessionId}
+                  onValueChange={(v) => setSelectedSessionId(v as string)}
+                >
                   <SelectTrigger id="currentSession" className="w-full">
                     <SelectValue placeholder="Select session" />
                   </SelectTrigger>

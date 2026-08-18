@@ -233,7 +233,12 @@ function AddSubjectDialog({ examinationId, onCreated }: { examinationId: string;
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="subject">Subject</Label>
-            <Select value={subjectId} onValueChange={(v) => setSubjectId(v as string)} disabled={loadingOptions}>
+            <Select
+              items={subjects.map((s) => ({ value: s.id, label: s.name }))}
+              value={subjectId}
+              onValueChange={(v) => setSubjectId(v as string)}
+              disabled={loadingOptions}
+            >
               <SelectTrigger id="subject" className="w-full">
                 <SelectValue placeholder={loadingOptions ? "Loading…" : "Select subject"} />
               </SelectTrigger>
@@ -248,7 +253,12 @@ function AddSubjectDialog({ examinationId, onCreated }: { examinationId: string;
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="class">Class</Label>
-            <Select value={classId} onValueChange={(v) => setClassId(v as string)} disabled={loadingOptions}>
+            <Select
+              items={classes.map((c) => ({ value: c.id, label: c.name }))}
+              value={classId}
+              onValueChange={(v) => setClassId(v as string)}
+              disabled={loadingOptions}
+            >
               <SelectTrigger id="class" className="w-full">
                 <SelectValue placeholder={loadingOptions ? "Loading…" : "Select class"} />
               </SelectTrigger>

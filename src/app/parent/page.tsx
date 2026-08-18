@@ -57,7 +57,11 @@ export default function ParentDashboardPage() {
           <p className="text-sm text-muted-foreground">Attendance, results, and fees for your children.</p>
         </div>
         {children.length > 1 && (
-          <Select value={selectedId} onValueChange={(v) => setSelectedId((v as string) ?? "")}>
+          <Select
+            items={children.map((c) => ({ value: c.id, label: c.fullName }))}
+            value={selectedId}
+            onValueChange={(v) => setSelectedId((v as string) ?? "")}
+          >
             <SelectTrigger className="w-56">
               <SelectValue placeholder="Select child" />
             </SelectTrigger>

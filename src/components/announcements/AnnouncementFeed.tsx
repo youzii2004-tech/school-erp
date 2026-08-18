@@ -180,6 +180,12 @@ function AnnouncementComposer({
             <div className="space-y-1.5">
               <Label htmlFor="ann-audience-type">Audience</Label>
               <Select
+                items={[
+                  { value: "ALL", label: "Everyone" },
+                  { value: "ROLE", label: "A specific role" },
+                  { value: "CLASS", label: "A specific class" },
+                  { value: "SECTION", label: "A specific section" },
+                ]}
                 value={audienceType}
                 onValueChange={(v) => {
                   setAudienceType(v as typeof audienceType);
@@ -202,7 +208,11 @@ function AnnouncementComposer({
           {audienceType === "ROLE" && (
             <div className="space-y-1.5">
               <Label htmlFor="ann-role-value">Role</Label>
-              <Select value={audienceValue} onValueChange={(v) => setAudienceValue((v as string) ?? "")}>
+              <Select
+                items={ROLE_OPTIONS.map((r) => ({ value: r, label: r }))}
+                value={audienceValue}
+                onValueChange={(v) => setAudienceValue((v as string) ?? "")}
+              >
                 <SelectTrigger id="ann-role-value" className="w-full">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
@@ -220,7 +230,11 @@ function AnnouncementComposer({
           {audienceType === "CLASS" && (
             <div className="space-y-1.5">
               <Label htmlFor="ann-class-value">Class</Label>
-              <Select value={audienceValue} onValueChange={(v) => setAudienceValue((v as string) ?? "")}>
+              <Select
+                items={classes.map((c) => ({ value: c.id, label: c.name }))}
+                value={audienceValue}
+                onValueChange={(v) => setAudienceValue((v as string) ?? "")}
+              >
                 <SelectTrigger id="ann-class-value" className="w-full">
                   <SelectValue placeholder="Select class" />
                 </SelectTrigger>
@@ -238,7 +252,11 @@ function AnnouncementComposer({
           {audienceType === "SECTION" && (
             <div className="space-y-1.5">
               <Label htmlFor="ann-section-value">Section</Label>
-              <Select value={audienceValue} onValueChange={(v) => setAudienceValue((v as string) ?? "")}>
+              <Select
+                items={sectionOptions.map((o) => ({ value: o.value, label: o.label }))}
+                value={audienceValue}
+                onValueChange={(v) => setAudienceValue((v as string) ?? "")}
+              >
                 <SelectTrigger id="ann-section-value" className="w-full">
                   <SelectValue
                     placeholder={sectionOptions.length === 0 ? "No sections assigned" : "Select section"}

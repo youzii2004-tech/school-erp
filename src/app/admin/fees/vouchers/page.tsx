@@ -229,7 +229,15 @@ function GenerateVoucherDialog({ onCreated }: { onCreated: () => void }) {
 
           <div className="space-y-1.5">
             <Label htmlFor="session">Session</Label>
-            <Select value={sessionId} onValueChange={(v) => setSessionId(v as string)} disabled={loadingOptions}>
+            <Select
+              items={sessions.map((s) => ({
+                value: s.id,
+                label: `${s.name}${s.isCurrent ? " (Current)" : ""}`,
+              }))}
+              value={sessionId}
+              onValueChange={(v) => setSessionId(v as string)}
+              disabled={loadingOptions}
+            >
               <SelectTrigger id="session" className="w-full">
                 <SelectValue placeholder="Select session" />
               </SelectTrigger>
@@ -370,7 +378,11 @@ export default function FeeVouchersPage() {
             className="pl-8"
           />
         </div>
-        <Select value={status} onValueChange={(v) => setStatus((v as string) ?? "ALL")}>
+        <Select
+          items={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          value={status}
+          onValueChange={(v) => setStatus((v as string) ?? "ALL")}
+        >
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
