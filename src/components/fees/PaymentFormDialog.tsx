@@ -147,7 +147,7 @@ export function PaymentFormDialog({ voucherId, onRecorded, trigger }: PaymentFor
 
           <div className="space-y-1.5">
             <Label htmlFor="method">Method</Label>
-            <Select value={method} onValueChange={(v) => setMethod(v as PaymentMethod)}>
+            <Select items={METHOD_OPTIONS} value={method} onValueChange={(v) => setMethod(v as PaymentMethod)}>
               <SelectTrigger id="method" className="w-full">
                 <SelectValue placeholder="Select method" />
               </SelectTrigger>

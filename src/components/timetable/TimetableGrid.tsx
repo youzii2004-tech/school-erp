@@ -143,7 +143,11 @@ function AddEntryForm({
     <form onSubmit={handleSubmit} className="space-y-2.5 rounded-lg border border-dashed border-border p-3">
       <div className="space-y-1.5">
         <Label className="text-xs">Subject</Label>
-        <Select value={subjectId} onValueChange={(v) => setSubjectId((v as string) ?? "")}>
+        <Select
+          items={subjects.map((s) => ({ value: s.id, label: s.name }))}
+          value={subjectId}
+          onValueChange={(v) => setSubjectId((v as string) ?? "")}
+        >
           <SelectTrigger className="w-full" size="sm">
             <SelectValue placeholder="Select subject" />
           </SelectTrigger>
@@ -158,7 +162,11 @@ function AddEntryForm({
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Teacher</Label>
-        <Select value={teacherId} onValueChange={(v) => setTeacherId((v as string) ?? "")}>
+        <Select
+          items={teachers.map((t) => ({ value: t.id, label: t.fullName }))}
+          value={teacherId}
+          onValueChange={(v) => setTeacherId((v as string) ?? "")}
+        >
           <SelectTrigger className="w-full" size="sm">
             <SelectValue placeholder="Select teacher" />
           </SelectTrigger>
@@ -318,7 +326,14 @@ export function TimetableGrid({ editable }: { editable: boolean }) {
       {editable && (
         <div className="max-w-xs space-y-1.5">
           <Label className="text-xs text-muted-foreground">Section</Label>
-          <Select value={sectionId} onValueChange={(v) => setSectionId((v as string) ?? "")}>
+          <Select
+            items={sections.map((s) => ({
+              value: s.id,
+              label: classNameById[s.classId] ? `${classNameById[s.classId]} - ${s.name}` : s.name,
+            }))}
+            value={sectionId}
+            onValueChange={(v) => setSectionId((v as string) ?? "")}
+          >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select a section" />
             </SelectTrigger>

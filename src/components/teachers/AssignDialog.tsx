@@ -144,7 +144,12 @@ export function AssignDialog({ teacherId, onAssigned, trigger }: AssignDialogPro
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="subject">Subject</Label>
-            <Select value={subjectId} onValueChange={(v) => setSubjectId(v as string)} disabled={loadingOptions}>
+            <Select
+              items={subjects.map((s) => ({ value: s.id, label: s.name }))}
+              value={subjectId}
+              onValueChange={(v) => setSubjectId(v as string)}
+              disabled={loadingOptions}
+            >
               <SelectTrigger id="subject" className="w-full">
                 <SelectValue placeholder={loadingOptions ? "Loading…" : "Select subject"} />
               </SelectTrigger>
@@ -161,6 +166,7 @@ export function AssignDialog({ teacherId, onAssigned, trigger }: AssignDialogPro
           <div className="space-y-1.5">
             <Label htmlFor="class">Class</Label>
             <Select
+              items={classes.map((c) => ({ value: c.id, label: c.name }))}
               value={classId}
               onValueChange={(v) => {
                 setClassId(v as string);
@@ -183,7 +189,12 @@ export function AssignDialog({ teacherId, onAssigned, trigger }: AssignDialogPro
 
           <div className="space-y-1.5">
             <Label htmlFor="section">Section</Label>
-            <Select value={sectionId} onValueChange={(v) => setSectionId(v as string)} disabled={loadingOptions || !classId}>
+            <Select
+              items={filteredSections.map((s) => ({ value: s.id, label: s.name }))}
+              value={sectionId}
+              onValueChange={(v) => setSectionId(v as string)}
+              disabled={loadingOptions || !classId}
+            >
               <SelectTrigger id="section" className="w-full">
                 <SelectValue placeholder="Select section" />
               </SelectTrigger>

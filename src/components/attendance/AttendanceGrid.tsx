@@ -186,7 +186,14 @@ export function AttendanceGrid() {
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">Section</label>
-          <Select value={sectionId} onValueChange={(v) => setSectionId(v ?? "")}>
+          <Select
+            items={(sections ?? []).map((s) => ({
+              value: s.id,
+              label: classNameById[s.classId] ? `${classNameById[s.classId]} - ${s.name}` : s.name,
+            }))}
+            value={sectionId}
+            onValueChange={(v) => setSectionId(v ?? "")}
+          >
             <SelectTrigger className="w-56">
               <SelectValue placeholder="Select a section" />
             </SelectTrigger>
