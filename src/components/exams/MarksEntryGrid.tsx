@@ -204,7 +204,11 @@ export function MarksEntryGrid() {
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">Exam</label>
-          <Select value={examinationId} onValueChange={(v) => setExaminationId(v ?? "")}>
+          <Select
+            items={(exams ?? []).map((e) => ({ value: e.id, label: e.name }))}
+            value={examinationId}
+            onValueChange={(v) => setExaminationId(v ?? "")}
+          >
             <SelectTrigger className="w-56">
               <SelectValue placeholder={exams === null ? "Loading…" : "Select an exam"} />
             </SelectTrigger>
@@ -220,6 +224,10 @@ export function MarksEntryGrid() {
         <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">Subject</label>
           <Select
+            items={(examSubjects ?? []).map((es) => ({
+              value: es.id,
+              label: `${es.subject.name} — ${classNameById[es.classId] ?? es.classId}`,
+            }))}
             value={examSubjectId}
             onValueChange={(v) => setExamSubjectId(v ?? "")}
             disabled={!examinationId || loadingExamSubjects}
