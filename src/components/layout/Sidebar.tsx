@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ComponentType } from "react";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import {
   LayoutDashboard,
   Users,
@@ -15,10 +16,13 @@ import {
   Megaphone,
   BarChart3,
   ChevronDown,
+  Menu,
   School,
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { DialogTitle } from "@/components/ui/dialog";
 
 type Role = "ADMIN" | "TEACHER" | "STUDENT" | "PARENT";
 
@@ -87,11 +91,20 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-function NavLink({ item, active }: { item: NavLeaf; active: boolean }) {
+function NavLink({
+  item,
+  active,
+  onNavigate,
+}: {
+  item: NavLeaf;
+  active: boolean;
+  onNavigate?: () => void;
+}) {
   const Icon = item.icon;
   return (
     <Link
       href={item.href}
+      onClick={onNavigate}
       className={cn(
         "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
         active
@@ -105,7 +118,15 @@ function NavLink({ item, active }: { item: NavLeaf; active: boolean }) {
   );
 }
 
-function NavGroupItem({ group, pathname }: { group: NavGroup; pathname: string }) {
+function NavGroupItem({
+  group,
+  pathname,
+  onNavigate,
+}: {
+  group: NavGroup;
+  pathname: string;
+  onNavigate?: () => void;
+}) {
   const containsActive = group.children.some((c) => isActive(pathname, c.href));
   const [open, setOpen] = useState(containsActive);
   const Icon = group.icon;
@@ -130,7 +151,12 @@ function NavGroupItem({ group, pathname }: { group: NavGroup; pathname: string }
       {open && (
         <div className="mt-0.5 ml-4 space-y-0.5 border-l border-border pl-3">
           {group.children.map((child) => (
-            <NavLink key={child.href} item={child} active={isActive(pathname, child.href)} />
+            <NavLink
+              key={child.href}
+              item={child}
+              active={isActive(pathname, child.href)}
+              onNavigate={onNavigate}
+            />
           ))}
         </div>
       )}
@@ -138,12 +164,16 @@ function NavGroupItem({ group, pathname }: { group: NavGroup; pathname: string }
   );
 }
 
-export function Sidebar({ role }: { role: Role }) {
+// Shared between the always-visible desktop sidebar and the mobile drawer
+// (MobileSidebarTrigger below) so both render identical nav content from one
+// source. `onNavigate` is only passed by the mobile drawer, to close itself
+// after a real navigation (not on group-expand clicks, which don't navigate).
+function SidebarNav({ role, onNavigate }: { role: Role; onNavigate?: () => void }) {
   const pathname = usePathname();
   const items = NAV[role];
 
   return (
-    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-border bg-card">
+    <>
       <div className="flex h-14 items-center gap-2 border-b border-border px-4">
         <School className="size-5 text-primary" />
         <span className="font-heading text-sm font-semibold">School ERP</span>
@@ -151,12 +181,59 @@ export function Sidebar({ role }: { role: Role }) {
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {items.map((item) =>
           isGroup(item) ? (
-            <NavGroupItem key={item.label} group={item} pathname={pathname} />
+            <NavGroupItem
+              key={item.label}
+              group={item}
+              pathname={pathname}
+              onNavigate={onNavigate}
+            />
           ) : (
-            <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
+            <NavLink
+              key={item.href}
+              item={item}
+              active={isActive(pathname, item.href)}
+              onNavigate={onNavigate}
+            />
           )
         )}
       </nav>
+    </>
+  );
+}
+
+// Desktop sidebar. BUG-002: this used to render unconditionally at a fixed
+// w-60, with no responsive collapse — below md it consumed the entire
+// viewport width and pushed all page content off-screen. Now hidden below
+// md; MobileSidebarTrigger below provides the small-viewport equivalent.
+export function Sidebar({ role }: { role: Role }) {
+  return (
+    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-border bg-card md:flex">
+      <SidebarNav role={role} />
     </aside>
+  );
+}
+
+// Mobile/tablet equivalent of Sidebar: a hamburger button (rendered by
+// Topbar, hidden at md and up) that opens the same nav in a left-anchored
+// slide-in drawer instead of a permanently docked column.
+export function MobileSidebarTrigger({ role }: { role: Role }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
+      <DialogPrimitive.Trigger
+        render={<Button variant="ghost" size="icon" className="md:hidden" />}
+      >
+        <Menu />
+        <span className="sr-only">Open menu</span>
+      </DialogPrimitive.Trigger>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/30 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
+        <DialogPrimitive.Popup className="fixed inset-y-0 left-0 z-50 flex h-full w-64 max-w-[80vw] flex-col border-r border-border bg-card outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-left data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-left">
+          <DialogTitle className="sr-only">Navigation menu</DialogTitle>
+          <SidebarNav role={role} onNavigate={() => setOpen(false)} />
+        </DialogPrimitive.Popup>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

@@ -18,7 +18,7 @@ export function DashboardShell({
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="print:hidden">
-          <Topbar />
+          <Topbar role={role} />
         </div>
         <main className="flex-1 overflow-y-auto print:overflow-visible">
           <div className="mx-auto w-full max-w-7xl px-6 py-8 lg:px-8 print:max-w-none print:p-0">{children}</div>
