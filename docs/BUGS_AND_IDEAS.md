@@ -163,7 +163,7 @@ wrong or janky, doesn't block. **P2** = polish/nice-to-have.
   database id, or a raw enum key like `"FEMALE"`) instead of showing the human label —
   most visible on pre-filled/edit selects and enum-backed selects (e.g. Gender).
 - **Fix:** added `items={array.map(x => ({ value: x.id, label: <same text the
-  SelectItem already rendered> }))}` to every `<Select>` root in the app — 31 instances
+  SelectItem already rendered> }))}` to every `<Select>` root in the app — 32 instances
   across 16 files total (`src/components/ui/select.tsx` itself was not touched; only
   call sites), covering fetched-array selects, static/enum-backed selects, and
   conditional-label selects (e.g. the session picker's `" (Current)"` suffix).
@@ -171,5 +171,5 @@ wrong or janky, doesn't block. **P2** = polish/nice-to-have.
   select now shows "Female" in the trigger (not the raw `"FEMALE"` value) after
   selection; the Timetable page's Section select shows "Grade 7 - A" (not a database
   id) after selection. Both are representative of the fetched-array and enum-backed
-  cases respectively; the remaining 39 sites use the identical, mechanically verified
+  cases respectively; the remaining 30 sites use the identical, mechanically verified
   `items` pattern.
