@@ -24,6 +24,7 @@ type Student = {
   admissionNumber: string;
   fullName: string;
   status: string;
+  enrollments: { class: { name: string }; section: { name: string } }[];
 };
 
 const STATUS_VARIANT: Record<string, "default" | "outline" | "destructive"> = {
@@ -169,11 +170,11 @@ export default function StudentsPage() {
                   </TableCell>
                   <TableCell>{student.admissionNumber}</TableCell>
                   <TableCell className="font-medium">{student.fullName}</TableCell>
-                  {/* GET /api/students (Task 6) returns raw Student rows only, no
-                      enrollment join — class/section can't be resolved from this
-                      endpoint yet. Enrollment assignment ships in Task 9; until then
-                      this column is always "—" per the brief. */}
-                  <TableCell className="text-muted-foreground">—</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {student.enrollments[0]
+                      ? `${student.enrollments[0].class.name} - ${student.enrollments[0].section.name}`
+                      : "—"}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANT[student.status] ?? "outline"}>
                       {student.status}
