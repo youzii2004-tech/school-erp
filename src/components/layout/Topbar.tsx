@@ -6,6 +6,9 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { MobileSidebarTrigger } from "@/components/layout/Sidebar";
+
+type Role = "ADMIN" | "TEACHER" | "STUDENT" | "PARENT";
 
 // Task 25 added a real, unauthenticated GET /api/settings/institute backed by
 // the Setting table (src/lib/settings.ts). Fetch it client-side and fall back
@@ -22,7 +25,7 @@ function initials(name?: string | null) {
     .join("");
 }
 
-export function Topbar() {
+export function Topbar({ role }: { role: Role }) {
   const { data: session } = useSession();
   const user = session?.user;
   const [instituteName, setInstituteName] = useState(FALLBACK_INSTITUTE_NAME);
@@ -43,10 +46,13 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-6">
-      <span className="font-heading text-sm font-semibold text-foreground">
-        {instituteName}
-      </span>
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-4 sm:px-6">
+      <div className="flex items-center gap-2">
+        <MobileSidebarTrigger role={role} />
+        <span className="font-heading text-sm font-semibold text-foreground">
+          {instituteName}
+        </span>
+      </div>
 
       <div className="flex items-center gap-3">
         {user && (
@@ -55,7 +61,9 @@ export function Topbar() {
               <AvatarFallback>{initials(user.name)}</AvatarFallback>
             </Avatar>
             <span className="hidden text-sm font-medium sm:inline">{user.name}</span>
-            <Badge variant="secondary">{user.role}</Badge>
+            <Badge variant="secondary" className="hidden sm:inline-flex">
+              {user.role}
+            </Badge>
           </div>
         )}
         <Button
@@ -64,7 +72,8 @@ export function Topbar() {
           onClick={() => signOut({ callbackUrl: "/login" })}
         >
           <LogOut />
-          Sign out
+          <span className="hidden sm:inline">Sign out</span>
+          <span className="sr-only sm:hidden">Sign out</span>
         </Button>
       </div>
     </header>

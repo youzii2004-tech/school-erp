@@ -29,18 +29,6 @@ wrong or janky, doesn't block. **P2** = polish/nice-to-have.
 
 ## Open Bugs
 
-### BUG-002 — Overall app layout feels off / possibly a browser-rendering issue (P1)
-- **Reported by:** Usaid, 2026-08-18.
-- **Symptom:** "the layout of entire app itself maybe due to browser not sure" — general
-  layout looked wrong in his browser session. Not pinned to one page.
-- **Next step:** reproduce across at least two engines/viewports (e.g. Chrome via
-  claude-in-chrome or Playwright, at a few widths — this was first tested at a cramped
-  400px-ish viewport by Claude, which cut content off; re-test at realistic desktop
-  widths, 1280–1920px, and common laptop breakpoints, plus a mobile width). Check for:
-  missing `max-width`/container constraints, sidebar/content overlap, unstyled flashes,
-  or a Tailwind purge/build issue that only shows up outside `npm run dev`.
-- **Status:** OPEN — not yet reproduced/confirmed by Claude.
-
 ### BUG-003 — Some text is wrong (unspecified) (P1)
 - **Reported by:** Usaid, 2026-08-18.
 - **Symptom:** "text was wrong" — no specific page/string given yet.
@@ -72,6 +60,61 @@ wrong or janky, doesn't block. **P2** = polish/nice-to-have.
 ---
 
 ## Fixed
+
+### BUG-002 — Overall app layout feels off / possibly a browser-rendering issue (P1)
+- **Fixed:** 2026-08-19.
+- **Reported by:** Usaid, 2026-08-18: "the layout of entire app itself maybe due to
+  browser not sure" — no specific page. Never previously reproduced (a prior Claude
+  session tested at a cramped ~400px viewport and wrongly concluded things were broken;
+  this pass tested realistic desktop widths per the corrected instruction).
+- **Root cause (confirmed, reproducible):** `Sidebar` (`src/components/layout/Sidebar.tsx`)
+  rendered as `<aside className="sticky top-0 flex h-screen w-60 shrink-0 ...">`
+  unconditionally, with no responsive breakpoint at all. Below Tailwind's `md` (768px)
+  breakpoint — i.e. any real phone, and effectively most tablets once the scrollbar is
+  accounted for — the fixed 240px sidebar consumed most/all of the viewport width and
+  pushed all page content (dashboard cards, tables, everything) off-screen to the right,
+  requiring horizontal scrolling to see anything. This reproduced identically on both
+  `/admin` and `/admin/students` (shared layout shell), confirming it as an app-wide
+  defect, not a single-page one. Screenshots at 1920×1080 / 1440×900 / 1280×800 showed no
+  problem — the defect is width-triggered, matching a user on a narrow browser window,
+  a small laptop, or heavy OS/browser zoom, which fits Usaid's "maybe due to browser"
+  description exactly.
+- **Two secondary overflows found live-testing the same fix at 390×844 (same root
+  cause class — fixed-width flex rows with no wrap/hide at mobile widths), fixed in the
+  same pass:**
+  - `Topbar` (`src/components/layout/Topbar.tsx`): the right-side cluster
+    (avatar + username + role badge + "Sign out" button with label) didn't fit next to
+    the institute name at mobile widths, clipping the "Sign out" text off the right edge
+    of the screen with a real horizontal scrollbar.
+  - `src/app/admin/students/page.tsx`: the header's `Import` / `Export` / `Add Student`
+    button row (`flex items-center gap-2`, no wrap) overflowed off-screen at mobile
+    widths, making "Add Student" unreachable without scrolling right.
+- **Fix:**
+  - `Sidebar.tsx`: split into `SidebarNav` (shared nav content), `Sidebar` (desktop,
+    now `hidden md:flex` instead of always `flex`), and a new `MobileSidebarTrigger` — a
+    hamburger `Button` that opens the same nav in a left-anchored slide-in drawer built
+    on the existing `@base-ui/react/dialog` primitive (same one already used for
+    `src/components/ui/dialog.tsx`), closing itself when a real nav link is clicked
+    (`onNavigate`, not fired by group-expand toggle clicks).
+  - `Topbar.tsx`: takes a new `role` prop, renders `MobileSidebarTrigger` next to the
+    institute name; the role `Badge` and the "Sign out" button's text label are now
+    `hidden`/`sr-only` below `sm`, matching the existing `hidden ... sm:inline` pattern
+    already used for the username on that same line.
+  - `DashboardShell.tsx`: passes `role` through to `Topbar` (previously only `Sidebar`
+    got it).
+  - `students/page.tsx`: added `flex-wrap` to both the header row and the button-group
+    row so the action buttons wrap onto their own line(s) instead of overflowing.
+- **Verified:** live Playwright MCP browser pass, viewport (not `fullPage`, which has an
+  unrelated screenshot-stitching quirk in this environment — see task-6-report.md)
+  screenshots at 1920×1080, 1440×900, 1280×800, 768×1024, and 390×844, on `/admin`
+  (dashboard) and `/admin/students` (data table + Add Student form dialog). At ≥768px:
+  identical desktop sidebar/topbar as before, table/dialog unaffected, no regression. At
+  390×844: hamburger opens a working slide-in drawer with the full nav; clicking
+  "Students" navigates and auto-closes the drawer; topbar no longer clips; all three
+  student-list action buttons are reachable and the "Add Student" dialog opens and
+  renders correctly (it was already mobile-safe via its existing
+  `max-w-[calc(100%-2rem)]` sizing). Full detail, screenshots, and the viewport-quirk
+  writeup: `.superpowers/sdd/2026-08-19-bug-fix-batch/task-6-report.md`.
 
 ### BUG-004 — Students list table: Class/Section column always shows "—" (P0)
 - **Fixed:** 2026-08-19.
