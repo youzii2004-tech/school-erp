@@ -1,12 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-
-const roleHome: Record<string, string> = {
-  ADMIN: "/admin",
-  TEACHER: "/teacher",
-  STUDENT: "/student",
-  PARENT: "/parent",
-};
+import { roleHome } from "@/lib/role-home";
 
 export default withAuth(
   function middleware(req) {

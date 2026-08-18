@@ -63,6 +63,53 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const examSubjectId = req.nextUrl.searchParams.get("examSubjectId");
   if (!examSubjectId) return NextResponse.json({ error: "examSubjectId is required" }, { status: 400 });
-  const marks = await prisma.mark.findMany({ where: { examSubjectId }, include: { student: true } });
+
+  const examSubject = await prisma.examSubject.findUnique({
+    where: { id: examSubjectId },
+    include: { examination: true },
+  });
+  if (!examSubject) return NextResponse.json({ error: "Exam subject not found" }, { status: 404 });
+
+  const role = session.user.role;
+  const isPublished = !!examSubject.examination.publishedAt;
+
+  // Resolve which studentIds this caller is allowed to see, same pattern as
+  // GET /api/results: ADMIN/TEACHER see the whole exam-subject roster (subject
+  // to the TeacherSubject assignment check below); STUDENT/PARENT are scoped
+  // server-side from session.user.id and blocked entirely for an unpublished
+  // exam, matching results/route.ts's exact behavior.
+  let allowedStudentIds: Set<string> | null = null; // null = no restriction
+
+  if (role === "TEACHER") {
+    const teacher = await prisma.teacher.findUnique({ where: { userId: session.user.id } });
+    const assigned = teacher
+      ? await prisma.teacherSubject.findFirst({
+          where: { teacherId: teacher.id, subjectId: examSubject.subjectId, classId: examSubject.classId },
+        })
+      : null;
+    if (!assigned)
+      return NextResponse.json({ error: "You are not assigned to this class/subject" }, { status: 403 });
+  } else if (role === "STUDENT") {
+    if (!isPublished) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const student = await prisma.student.findUnique({ where: { userId: session.user.id } });
+    if (!student) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    allowedStudentIds = new Set([student.id]);
+  } else if (role === "PARENT") {
+    if (!isPublished) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const links = await prisma.guardianLink.findMany({ where: { userId: session.user.id } });
+    const studentIds = [...new Set(links.map((l) => l.studentId))];
+    if (studentIds.length === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    allowedStudentIds = new Set(studentIds);
+  } else if (role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const marks = await prisma.mark.findMany({
+    where: {
+      examSubjectId,
+      ...(allowedStudentIds ? { studentId: { in: [...allowedStudentIds] } } : {}),
+    },
+    include: { student: true },
+  });
   return NextResponse.json(marks);
 }
