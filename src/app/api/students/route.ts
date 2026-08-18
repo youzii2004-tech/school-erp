@@ -43,6 +43,13 @@ export async function GET(req: NextRequest) {
       ...(q ? { OR: [{ fullName: { contains: q } }, { admissionNumber: { contains: q } }] } : {}),
     },
     orderBy: { fullName: "asc" },
+    include: {
+      enrollments: {
+        include: { class: true, section: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
   });
   return NextResponse.json(students);
 }
