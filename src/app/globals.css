@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -21,6 +22,12 @@
   --radius: 0.6rem;
   --success: 142 71% 35%;
   --warning: 38 92% 50%;
+  /* Design-system tokens (ui-ux-pro-max professional dashboard) */
+  --ds-primary-dark: 222 47% 11%;
+  --ds-cta-green: 142 71% 45%;
+  /* Typography tokens */
+  --font-sans: "Fira Sans", system-ui, sans-serif;
+  --font-mono: "Fira Code", monospace;
 }
 .dark {
   --background: 222 47% 8%;
@@ -42,6 +49,9 @@
   --ring: 217 91% 60%;
   --success: 142 71% 45%;
   --warning: 38 92% 55%;
+  /* Typography tokens */
+  --font-sans: "Fira Sans", system-ui, sans-serif;
+  --font-mono: "Fira Code", monospace;
 }
 
 @theme inline {
@@ -64,6 +74,8 @@
   --color-ring: hsl(var(--ring));
   --color-success: hsl(var(--success));
   --color-warning: hsl(var(--warning));
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -73,4 +85,5 @@
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+  font-family: var(--font-sans);
 }

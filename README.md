@@ -1,5 +1,62 @@
 # School ERP
 
+<p align="center">
+  <img src="docs/showcase/00_school_erp_master_banner.png" alt="School ERP Architecture Banner" width="100%">
+</p>
+
+<p align="center">
+  <strong>Enterprise Multi-Role School Management System</strong><br>
+  Built with Next.js 16 (App Router), React 19, TypeScript, Prisma ORM, NextAuth RBAC, Recharts & Zero-Install Portable Windows Runtime.
+</p>
+
+<p align="center">
+  <a href="#executive-command-center">Executive Command Center</a> •
+  <a href="#student-lifecycle--admission">Student Lifecycle</a> •
+  <a href="#financial-ledger--fee-vouchers">Fee Vouchers</a> •
+  <a href="#tech-stack">Tech Stack</a> •
+  <a href="#default-seeded-login-credentials">Live Seeded Accounts</a>
+</p>
+
+---
+
+## Visual Architecture & Feature Walkthrough
+
+### 1. Executive Command Center
+<p align="center">
+  <img src="docs/showcase/01_showcase_admin_dashboard.png" alt="Executive Command Center" width="100%">
+</p>
+
+- **NextAuth v4 RBAC:** Role embedded into JWT session token; route-level middleware protects administrative operations.
+- **Dynamic Recharts Telemetry:** Area and bar charts visualize monthly attendance percentages and Rs. 60,000+ fee collection milestones.
+- **Role-Scoped Noticeboard:** Real-time school announcements broadcast to specific roles (Parents, Teachers, All Campus).
+
+---
+
+### 2. Student Lifecycle & Admission Directory
+<p align="center">
+  <img src="docs/showcase/02_showcase_students_directory.png" alt="Student Admission and Directory" width="100%">
+</p>
+
+- **Prisma Relational Model:** Historical enrollment preserved across sessions, classes, and sections; 1-to-many student-to-guardian linking.
+- **Zod Schema Runtime Validation:** Strict validation at both API routes and client form boundaries prevents invalid admissions.
+- **Streaming xlsx/CSV Parser:** Bulk student import with duplicate row detection, error reporting, and one-click CSV export.
+
+---
+
+### 3. Financial Ledger & Fee Vouchers
+<p align="center">
+  <img src="docs/showcase/03_showcase_fee_vouchers.png" alt="Financial Ledger and Fee Vouchers" width="100%">
+</p>
+
+- **Automated Voucher Engine:** Batch-generates monthly fee vouchers per class/session with parameterized tuition structures.
+- **Tri-State Accounting:** Real-time visual tracking across `PAID`, `PARTIALLY PAID`, and `UNPAID` states.
+- **Jest-Verified Accounting:** 100% test coverage on voucher calculation and grading math to guarantee zero ledger discrepancies.
+- **Printable Bank Slips:** Dedicated on-screen bank voucher print layout with customer and school stubs.
+
+---
+
+## Overview
+
 A School/Institute Management system built for a Pakistani school of roughly 300–500
 students, as unpaid favor work for a friend. The friend's original requirement document
 described a commercial-grade, ~25-module ERP (library, transport, inventory, multi-campus,
@@ -90,6 +147,22 @@ rows first, so it never duplicates data.
 npm test                    # Jest — unit tests for auth, CRUD validation, voucher/grading math
 npm run build && npm start  # production build, then serve it
 ```
+
+## Portable Windows build (no installs on the target PC)
+
+```bash
+npm run build:portable
+```
+
+Produces a `dist/` folder containing `Start School ERP.exe` — copy the whole
+folder to any Windows PC and double-click that exe; it starts the server and
+opens the app in the browser automatically. No Node, Docker, or `npm
+install` needed on the target machine. See
+[`docs/PACKAGING.md`](docs/PACKAGING.md) for how it works, how to rebuild
+after code changes, and how to keep a school's real data safe across
+rebuilds. When handing the `dist/` folder to a non-technical person, send
+[`docs/START_HERE_FOR_YOUR_FRIEND.md`](docs/START_HERE_FOR_YOUR_FRIEND.md)
+along with it — it's written for them, not a developer.
 
 As of the last verification pass (Task 27), `npm test` passes 8 suites / 20 tests, and
 `npm run build` compiles cleanly with zero TypeScript errors across all routes and pages.
