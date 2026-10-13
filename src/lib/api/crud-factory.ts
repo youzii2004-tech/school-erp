@@ -17,17 +17,23 @@ export function validateOrThrow<T>(schema: ZodSchema<T>, data: unknown): T {
   return parsed.data;
 }
 
+// Prisma model delegates are generic per model, and their method parameters are
+// contravariant, so no precise structural type accepts all of them. `any` is
+// confined to this boundary type; callers and results are validated by Zod.
+/* eslint-disable @typescript-eslint/no-explicit-any */
 type Delegate = {
   findMany: (args?: any) => Promise<any[]>;
   findUnique: (args: any) => Promise<any>;
   create: (args: any) => Promise<any>;
   update: (args: any) => Promise<any>;
 };
+type Args = Record<string, unknown>;
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export function makeCrudRoutes<T>(
   delegate: Delegate,
   schema: ZodSchema<T>,
-  opts: { writeRoles: Array<"ADMIN" | "TEACHER" | "STUDENT" | "PARENT">; orderBy?: any }
+  opts: { writeRoles: Array<"ADMIN" | "TEACHER" | "STUDENT" | "PARENT">; orderBy?: Args }
 ) {
   async function GET() {
     const session = await getServerSession(authOptions);
