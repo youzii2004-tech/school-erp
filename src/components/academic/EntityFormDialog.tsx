@@ -63,7 +63,9 @@ export function EntityFormDialog({
   // would otherwise get a new reference on every render and re-trigger the fetch
   // (and wipe in-progress input) on every keystroke.
   const fieldsRef = useRef(fields);
-  fieldsRef.current = fields;
+  useEffect(() => {
+    fieldsRef.current = fields;
+  });
 
   useEffect(() => {
     if (!open) return;
