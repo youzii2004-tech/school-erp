@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Multi-Role School Management System (MVP)</strong><br>
-  Built with Next.js 16 (App Router), React 19, TypeScript, Prisma ORM, NextAuth RBAC, Recharts & Zero-Install Portable Windows Runtime.
+  Built with Next.js 16 (App Router), React 19, TypeScript, Prisma ORM, NextAuth RBAC, Recharts & Zod.
 </p>
 
 <p align="center">
@@ -144,28 +144,16 @@ npm test                    # Jest — unit tests for auth, CRUD validation, vou
 npm run build && npm start  # production build, then serve it
 ```
 
-## Portable Windows build (no installs on the target PC)
+## Deploying
 
-```bash
-npm run build:portable
-```
+Run it on one machine with Node.js 20+: `npm ci`, set `.env` (strong `NEXTAUTH_SECRET`), `npx prisma migrate deploy`,
+`npm run build && npm start`. A one-click portable Windows build is **not** implemented. Before first real use:
+back up the database, rotate any seeded passwords, and set up scheduled backups ([`docs/BACKUP.md`](docs/BACKUP.md)).
+Apply database changes with `npx prisma migrate deploy` (not `migrate dev`) on a live database, after a backup.
 
-Produces a `dist/` folder containing `Start School ERP.exe` — copy the whole
-folder to any Windows PC and double-click that exe; it starts the server and
-opens the app in the browser automatically. No Node, Docker, or `npm
-install` needed on the target machine. See
-[`docs/PACKAGING.md`](docs/PACKAGING.md) for how it works, how to rebuild
-after code changes, and how to keep a school's real data safe across
-rebuilds. When handing the `dist/` folder to a non-technical person, send
-[`docs/START_HERE_FOR_YOUR_FRIEND.md`](docs/START_HERE_FOR_YOUR_FRIEND.md)
-along with it — it's written for them, not a developer.
-
-As of the last verification pass (Task 27), `npm test` passes 8 suites / 20 tests, and
-`npm run build` compiles cleanly with zero TypeScript errors across all routes and pages.
-`npm run lint` has a documented set of non-functional, deferred lint warnings (mostly a
-strict `react-hooks/set-state-in-effect` rule flagging a common, working "reset dialog
-state on open" pattern) — see Task 27's report for the full breakdown; nothing in that
-list is a real bug.
+`npm test` passes (42 tests across unit and route-level suites), `npm run build` compiles cleanly, and
+`npm run lint` reports 0 errors and a set of `react-hooks/set-state-in-effect` warnings (a working
+"reset dialog state on open" pattern, not a bug).
 
 ## What's included in v1
 
