@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { ZodSchema } from "zod";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
 
 export class ValidationError extends Error {
   issues: unknown;
@@ -36,7 +35,7 @@ export function makeCrudRoutes<T>(
   opts: { writeRoles: Array<"ADMIN" | "TEACHER" | "STUDENT" | "PARENT">; orderBy?: Args }
 ) {
   async function GET() {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const items = await delegate.findMany({
       where: { deletedAt: null },
@@ -46,7 +45,7 @@ export function makeCrudRoutes<T>(
   }
 
   async function POST(req: NextRequest) {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!requireRole(session, opts.writeRoles))
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     try {
@@ -70,7 +69,7 @@ export function makeCrudItemRoutes<T>(
 ) {
   async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!requireRole(session, opts.writeRoles))
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     try {
@@ -86,7 +85,7 @@ export function makeCrudItemRoutes<T>(
 
   async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!requireRole(session, opts.writeRoles))
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     await delegate.update({ where: { id }, data: { deletedAt: new Date() } });

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { announcementCreateSchema } from "@/lib/validation/announcement";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -12,7 +11,7 @@ import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
 // server-side from session.user.id — never from client input, same
 // ownership pattern as every prior task (GET /api/results, /api/exams, etc).
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const role = session.user.role;
@@ -74,7 +73,7 @@ export async function GET() {
 // TeacherSubject sections, closing the gap a hand-crafted request could
 // otherwise exploit.
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN", "TEACHER"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 

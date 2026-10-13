@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { teacherAssignSchema } from "@/lib/validation/teacher";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -13,7 +12,7 @@ import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
 // (which returns ALL exam-subjects for an exam) down to the (subjectId, classId)
 // pairs this teacher is actually assigned to.
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["TEACHER"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -30,7 +29,7 @@ export async function GET() {
 // assignment throws Prisma P2002, same pattern as POST /api/teachers' P2002
 // handling for duplicate email/username.
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {

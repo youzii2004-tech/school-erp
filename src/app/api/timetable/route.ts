@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { timetableEntrySchema, rangesOverlap } from "@/lib/validation/timetable";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -21,7 +20,7 @@ const ENTRY_INCLUDE = {
 // separate /api/teachers/me lookup endpoint — it resolves server-side from the
 // session, the same ownership pattern already used by GET /api/teacher-subjects.
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sectionId = req.nextUrl.searchParams.get("sectionId");
@@ -52,7 +51,7 @@ export async function GET(req: NextRequest) {
 // new one. Checked as two separate queries/conditions so the 409 message can
 // say which side conflicted (teacher vs section).
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {

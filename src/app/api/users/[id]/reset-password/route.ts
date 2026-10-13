@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, hashPassword, requireRole } from "@/lib/auth";
+import { hashPassword, requireRole, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { audit } from "@/lib/audit";
 import { generateTempPassword } from "@/lib/temp-password";
@@ -9,7 +8,7 @@ import { generateTempPassword } from "@/lib/temp-password";
 // The temp password is returned once in the response and never logged or stored in plain text.
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const target = await prisma.user.findUnique({ where: { id } });
   if (!target) return NextResponse.json({ error: "Not found" }, { status: 404 });
