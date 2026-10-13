@@ -73,6 +73,7 @@ const NAV: Record<Role, NavItem[]> = {
     { label: "Timetable", href: "/admin/timetable", icon: CalendarDays },
     { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
     { label: "Settings", href: "/admin/settings", icon: Settings },
+    { label: "Audit log", href: "/admin/audit", icon: ClipboardList },
   ],
   TEACHER: [
     { label: "Dashboard", href: "/teacher", icon: LayoutDashboard },

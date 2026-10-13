@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireRole } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { feePaymentSchema } from "@/lib/validation/fee";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
       return { payment, voucher: updatedVoucher };
     });
 
+    await audit({ id: session!.user.id, name: session!.user.name }, "payment.create", "FeePayment", result.payment.id, { voucherId: body.voucherId, amount: body.amount, method: body.method });
     return NextResponse.json(result, { status: 201 });
   } catch (e) {
     if (e instanceof ValidationError) return NextResponse.json({ error: e.issues }, { status: 400 });

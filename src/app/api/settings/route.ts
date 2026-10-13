@@ -1,3 +1,4 @@
+import { audit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = validateOrThrow(settingWriteSchema, await req.json());
     await setSetting(body.key, body.value);
+    await audit({ id: session!.user.id, name: session!.user.name }, "setting.update", "Setting", body.key);
     return NextResponse.json({ ok: true });
   } catch (e) {
     if (e instanceof ValidationError) return NextResponse.json({ error: e.issues }, { status: 400 });

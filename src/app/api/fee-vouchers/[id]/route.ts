@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireRole } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -44,5 +45,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     where: { id },
     data: { status: "CANCELLED" },
   });
+  await audit({ id: session!.user.id, name: session!.user.name }, "voucher.cancel", "FeeVoucher", id, { voucherNumber: voucher.voucherNumber, paidAmount: voucher.paidAmount });
   return NextResponse.json(updated);
 }

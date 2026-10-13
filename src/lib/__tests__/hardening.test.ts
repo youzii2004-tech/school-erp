@@ -23,3 +23,15 @@ describe("upload validation", () => {
     expect(isSafePathId("a/b")).toBe(false);
   });
 });
+
+import { passwordChangeSchema } from "@/lib/validation/password";
+describe("passwordChangeSchema", () => {
+  it("enforces length, letter+digit and difference", () => {
+    const ok = (n: string, c = "old") => passwordChangeSchema.safeParse({ currentPassword: c, newPassword: n }).success;
+    expect(ok("abcdefghi1")).toBe(true);
+    expect(ok("short1")).toBe(false);
+    expect(ok("onlyletterss")).toBe(false);
+    expect(ok("1234567890")).toBe(false);
+    expect(ok("abcdefghi1", "abcdefghi1")).toBe(false);
+  });
+});

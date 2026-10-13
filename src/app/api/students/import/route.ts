@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireRole } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { parseStudentRows, StudentRow } from "@/lib/import-export";
 
@@ -109,6 +110,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await prisma.student.createMany({ data: preview.valid });
+    await audit({ id: session!.user.id, name: session!.user.name }, "student.import", "Student", undefined, { imported: result.count });
     return NextResponse.json(
       { ...preview, imported: result.count },
       { status: 201 }

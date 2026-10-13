@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireRole } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { VoucherStatus } from "@prisma/client";
 import { feeVoucherCreateSchema } from "@/lib/validation/fee";
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
         status: computeVoucherStatus(totalPayable, 0),
       },
     });
+    await audit({ id: session!.user.id, name: session!.user.name }, "voucher.create", "FeeVoucher", voucher.id, { voucherNumber, totalPayable });
     return NextResponse.json(voucher, { status: 201 });
   } catch (e) {
     if (e instanceof ValidationError) return NextResponse.json({ error: e.issues }, { status: 400 });
