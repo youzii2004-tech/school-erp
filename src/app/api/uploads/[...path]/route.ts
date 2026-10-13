@@ -83,6 +83,9 @@ export async function GET(
     headers: {
       "Content-Type": contentTypeFor(resolvedPath),
       "Content-Disposition": `inline; filename="${path.basename(resolvedPath)}"`,
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox",
+      "Cache-Control": "private, no-store",
     },
   });
 }

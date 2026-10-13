@@ -15,7 +15,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest"
+    "test": "jest",
+    "backup": "node scripts/backup.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
