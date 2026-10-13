@@ -356,3 +356,18 @@ model Setting {
   key   String @id
   value String // JSON-encoded value
 }
+
+// Append-only record of who changed what. Written best-effort by src/lib/audit.ts.
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  username  String?
+  action    String   // e.g. "fee.payment.create"
+  entity    String
+  entityId  String?
+  detail    String?  // short JSON summary, never secrets
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entity, entityId])
+}

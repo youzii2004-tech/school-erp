@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireRole } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { attendanceBulkSchema } from "@/lib/validation/attendance";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -26,6 +27,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "You are not assigned to this section" }, { status: 403 });
     }
 
+    // Every entry must belong to the section being marked; otherwise an
+    // assigned teacher could write attendance for any student in the school.
+    const ids = [...new Set(body.entries.map((e) => e.studentId))];
+    const rostered = await prisma.enrollment.findMany({
+      where: { sectionId: body.sectionId, status: "ACTIVE", studentId: { in: ids } },
+      distinct: ["studentId"],
+      select: { studentId: true },
+    });
+    if (rostered.length !== ids.length)
+      return NextResponse.json({ error: "One or more students are not enrolled in this section" }, { status: 400 });
+
     const result = await prisma.$transaction(
       body.entries.map((entry) =>
         prisma.attendance.upsert({
@@ -35,6 +47,7 @@ export async function POST(req: NextRequest) {
         })
       )
     );
+    await audit({ id: session!.user.id, name: session!.user.name }, "attendance.save", "Attendance", body.sectionId, { count: result.length, date: body.date });
     return NextResponse.json({ count: result.length }, { status: 201 });
   } catch (e) {
     if (e instanceof ValidationError) return NextResponse.json({ error: e.issues }, { status: 400 });

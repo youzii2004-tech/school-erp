@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireRole } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { randomUUID } from "crypto";
 import { writeFile, mkdir } from "fs/promises";
@@ -36,5 +37,6 @@ export async function POST(req: NextRequest) {
 
   const relPath = `students/${studentId}/${filename}`;
   await prisma.document.create({ data: { studentId, type, filePath: relPath } });
+  await audit({ id: session!.user.id, name: session!.user.name }, "document.upload", "Document", studentId, { type });
   return NextResponse.json({ filePath: relPath }, { status: 201 });
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireRole } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { studentUpdateSchema } from "@/lib/validation/student";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -42,6 +43,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const body = validateOrThrow(studentUpdateSchema, await req.json());
     const updated = await prisma.student.update({ where: { id }, data: body });
+    await audit({ id: session!.user.id, name: session!.user.name }, "student.update", "Student", id, { fields: Object.keys(body) });
     return NextResponse.json(updated);
   } catch (e) {
     if (e instanceof ValidationError) return NextResponse.json({ error: e.issues }, { status: 400 });
@@ -55,5 +57,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!requireRole(session, ["ADMIN"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   await prisma.student.update({ where: { id }, data: { deletedAt: new Date() } });
+  await audit({ id: session!.user.id, name: session!.user.name }, "student.delete", "Student", id);
   return NextResponse.json({ ok: true });
 }

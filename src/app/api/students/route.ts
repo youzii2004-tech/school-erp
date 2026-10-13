@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireRole } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { studentCreateSchema } from "@/lib/validation/student";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.student.findUnique({ where: { admissionNumber: body.admissionNumber } });
     if (existing) return NextResponse.json({ error: "Admission number already exists" }, { status: 409 });
     const student = await prisma.student.create({ data: body });
+    await audit({ id: session!.user.id, name: session!.user.name }, "student.create", "Student", student.id, { admissionNumber: student.admissionNumber });
     return NextResponse.json(student, { status: 201 });
   } catch (e) {
     if (e instanceof ValidationError) return NextResponse.json({ error: e.issues }, { status: 400 });

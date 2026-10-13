@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireRole } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 
 // Next.js 16 dynamic route params are async — must be awaited before use.
@@ -45,5 +46,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     where: { id },
     data: { publishedAt: new Date() },
   });
+  await audit({ id: session!.user.id, name: session!.user.name }, "exam.publish", "Examination", id);
   return NextResponse.json(updated);
 }

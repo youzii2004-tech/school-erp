@@ -192,6 +192,7 @@ list is a real bug.
   (duplicate detection, per-row error report), and a CSV export of the student list.
 - **Settings** — institute profile (name/contact/address), configurable grading bands,
   current-session control.
+- **Audit log & account page** — Admin audit viewer; every user can change their own password at `/account`.
 - **Soft delete** — students, fee records, and exam/mark records use a `deletedAt` column;
   the UI never exposes a hard delete for these.
 - **Demo seed script** — so the app is never empty on first run.
@@ -209,8 +210,7 @@ Copied from the spec's Non-Goals, so it isn't lost:
 - Scheduled/automated backups. `npm run backup` snapshots the SQLite DB and uploads; schedule it yourself (cron / Task Scheduler) and copy the result off the machine.
 - The full 8-role permission matrix from the original spec — Super Admin, Accountant, Exam
   Officer, and Reception are all merged into a single Admin role for v1.
-- A full granular audit log of every event — v1 only guarantees soft delete plus basic
-  created/updated timestamps, not a per-field change history.
+- A full per-field change history. v1 has an append-only **audit log** (who/what/when for payments, vouchers, marks, attendance, student/teacher changes, promotions, publishing, uploads, imports, settings and password changes; viewable at Admin → Audit log) plus soft delete, but it does not record before/after values.
 
 If any of these are wanted later, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)'s
 "Deferred modules" section for the smallest concrete next step for each one.
