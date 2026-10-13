@@ -24,6 +24,8 @@ import { parseStudentRows, StudentRow } from "@/lib/import-export";
 //      findMany({ admissionNumber: { in: [...] } }) here in the route (not
 //      in parseStudentRows), so parseStudentRows stays synchronously
 //      testable per the Task 24 brief's Interfaces line.
+const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
+
 type DuplicateEntry = {
   admissionNumber: string;
   validRowIndex: number; // 1-based position within the parsed `valid` list (not the sheet row)
@@ -84,6 +86,11 @@ export async function POST(req: NextRequest) {
   const file = formData.get("file");
   if (!file || typeof file === "string")
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+
+  // xlsx has known unpatched parser vulnerabilities (ReDoS / prototype pollution),
+  // so bound what we feed it.
+  if (file.size > MAX_IMPORT_BYTES)
+    return NextResponse.json({ error: "File too large (max 2MB)" }, { status: 413 });
 
   const buffer = Buffer.from(await file.arrayBuffer());
 

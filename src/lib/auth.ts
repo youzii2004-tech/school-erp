@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { isRateLimited, resetRateLimit } from "@/lib/rate-limit";
 
-if (process.env.NODE_ENV === "production") {
+if (process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build") {
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret || secret.length < 32 || secret === "your-secret-key-here") {
     throw new Error("NEXTAUTH_SECRET must be set to a strong random value (>= 32 chars) in production.");
@@ -30,10 +30,13 @@ export const authOptions: NextAuthOptions = {
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.username || !credentials?.password) return null;
         const rlKey = `login:${credentials.username.toLowerCase()}`;
-        if (isRateLimited(rlKey)) return null;
+        const fwd = req?.headers?.["x-forwarded-for"];
+        const ip = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(",")[0]?.trim();
+        // Per-username limit stops targeted guessing; per-IP (looser) stops spraying many usernames.
+        if (isRateLimited(rlKey) || (ip && isRateLimited(`login-ip:${ip}`, 30))) return null;
         const user = await prisma.user.findUnique({
           where: { username: credentials.username },
         });
@@ -47,6 +50,16 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
+      // Re-check the account on every token refresh so deactivating a user
+      // (or deleting them) revokes access immediately, not at JWT expiry.
+      if (!user && token.id) {
+        const current = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { isActive: true, role: true },
+        });
+        if (!current || !current.isActive) return {} as typeof token;
+        token.role = current.role;
+      }
       if (user) {
         token.role = (user as { role?: string }).role;
         // authorize() returns { id, ... } as `user.id`; NextAuth also mirrors
