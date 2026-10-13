@@ -102,6 +102,8 @@ export default function StudentsPage() {
               Content-Disposition: attachment header (Task 24 Step 7) — no
               fetch+blob dance needed; this codebase has no existing
               download-via-fetch pattern to reuse (checked uploads route). */}
+          {/* File download, not a page navigation: a plain <a> is correct (next/link would try to route). */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <Button variant="outline" size="sm" render={<a href="/api/students/export" />}>
             <Download />
             Export
