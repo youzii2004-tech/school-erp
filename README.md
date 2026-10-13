@@ -192,7 +192,7 @@ list is a real bug.
   (duplicate detection, per-row error report), and a CSV export of the student list.
 - **Settings** — institute profile (name/contact/address), configurable grading bands,
   current-session control.
-- **Audit log & account page** — Admin audit viewer; every user can change their own password at `/account`.
+- **Audit log & account page** — Admin audit viewer; every user can change their own password at `/account`; Admin → User accounts resets forgotten passwords (one-time temporary password, forced change at next sign-in) and deactivates accounts.
 - **Soft delete** — students, fee records, and exam/mark records use a `deletedAt` column;
   the UI never exposes a hard delete for these.
 - **Demo seed script** — so the app is never empty on first run.
@@ -207,7 +207,7 @@ Copied from the spec's Non-Goals, so it isn't lost:
 - Certificate generation + public verification page, student ID card generation.
 - Real PDF export — vouchers/marksheets/report cards are on-screen only in v1 (printable
   via the browser's own print dialog, not a generated PDF file).
-- Scheduled/automated backups. `npm run backup` snapshots the SQLite DB and uploads; schedule it yourself (cron / Task Scheduler) and copy the result off the machine.
+- Scheduled/automated backups. `npm run backup` snapshots the SQLite DB and uploads with retention; see [`docs/BACKUP.md`](docs/BACKUP.md) for scheduling, off-site copy and restore steps.
 - The full 8-role permission matrix from the original spec — Super Admin, Accountant, Exam
   Officer, and Reception are all merged into a single Admin role for v1.
 - A full per-field change history. v1 has an append-only **audit log** (who/what/when for payments, vouchers, marks, attendance, student/teacher changes, promotions, publishing, uploads, imports, settings and password changes; viewable at Admin → Audit log) plus soft delete, but it does not record before/after values.

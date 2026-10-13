@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { audit } from "@/lib/audit";
 import { isRateLimited, resetRateLimit } from "@/lib/rate-limit";
 
 if (process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build") {
@@ -40,9 +41,15 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.user.findUnique({
           where: { username: credentials.username },
         });
-        if (!user || !user.isActive) return null;
+        if (!user || !user.isActive) {
+          await audit(undefined, "login.failed", "User", undefined, { username: credentials.username.slice(0, 64), reason: user ? "inactive" : "unknown_user", ip });
+          return null;
+        }
         const valid = await verifyPassword(credentials.password, user.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          await audit({ id: user.id, name: user.username }, "login.failed", "User", user.id, { reason: "bad_password", ip });
+          return null;
+        }
         resetRateLimit(rlKey);
         return { id: user.id, name: user.username, email: user.email, role: user.role };
       },

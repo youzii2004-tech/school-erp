@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: await hashPassword(body.newPassword) },
+      data: { passwordHash: await hashPassword(body.newPassword), mustChangePassword: false },
     });
     resetRateLimit(rlKey);
     await audit({ id: user.id, name: user.username }, "password.change", "User", user.id);
