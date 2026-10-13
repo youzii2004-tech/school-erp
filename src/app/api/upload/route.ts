@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { randomUUID } from "crypto";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { safeUploadExtension, isSafePathId } from "@/lib/upload-validation";
 
 const ALLOWED_TYPES = ["BIRTH_CERT", "CNIC", "PREVIOUS_CERT", "PHOTO", "LEAVING_CERT", "OTHER"];
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -22,7 +23,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid upload" }, { status: 400 });
   if (file.size > MAX_BYTES) return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
 
-  const ext = path.extname(file.name).slice(0, 10);
+  if (!isSafePathId(studentId)) return NextResponse.json({ error: "Invalid upload" }, { status: 400 });
+  const ext = safeUploadExtension(file.name);
+  if (!ext) return NextResponse.json({ error: "Unsupported file type (jpg, png, gif, webp, pdf only)" }, { status: 400 });
+  const student = await prisma.student.findFirst({ where: { id: studentId, deletedAt: null }, select: { id: true } });
+  if (!student) return NextResponse.json({ error: "Student not found" }, { status: 404 });
   const filename = `${randomUUID()}${ext}`;
   const dir = path.join(process.cwd(), "uploads", "students", studentId);
   await mkdir(dir, { recursive: true });

@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Enterprise Multi-Role School Management System</strong><br>
+  <strong>Multi-Role School Management System (MVP)</strong><br>
   Built with Next.js 16 (App Router), React 19, TypeScript, Prisma ORM, NextAuth RBAC, Recharts & Zero-Install Portable Windows Runtime.
 </p>
 
@@ -50,7 +50,7 @@
 
 - **Automated Voucher Engine:** Batch-generates monthly fee vouchers per class/session with parameterized tuition structures.
 - **Tri-State Accounting:** Real-time visual tracking across `PAID`, `PARTIALLY PAID`, and `UNPAID` states.
-- **Jest-Verified Accounting:** 100% test coverage on voucher calculation and grading math to guarantee zero ledger discrepancies.
+- **Unit-Tested Accounting:** the voucher-status and grading helpers (`fee-calc.ts`, `grading.ts`) are covered by Jest unit tests. This is not whole-app coverage; API routes and UI have no automated tests.
 - **Printable Bank Slips:** Dedicated on-screen bank voucher print layout with customer and school stubs.
 
 ---
@@ -84,7 +84,7 @@ for the exact scope line.
 - **Validation:** Zod, shared between forms and API route handlers.
 - **Import/export:** `xlsx`, for CSV/Excel student bulk import and CSV export.
 - **Testing:** Jest (`ts-jest`) for focused unit tests on core business logic
-  (password hashing, CRUD validation, voucher/grading math).
+  (password hashing, CRUD validation, voucher/grading math, rate limiter, upload validation).
 
 ## Prerequisites
 
@@ -98,7 +98,7 @@ for the exact scope line.
 
 ```bash
 npm install
-cp .env.example .env      # already checked in — see note below
+cp .env.example .env      # then set your own NEXTAUTH_SECRET
 npx prisma migrate dev
 npx prisma db seed
 npm run dev
@@ -106,25 +106,21 @@ npm run dev
 
 Then open `http://localhost:3000` and sign in with one of the seeded accounts below.
 
-**Note on `.env`:** `.env.example` is checked into this repo with the three variables the
-app reads (`DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`); a working `.env` for local
-development is *also* already checked in (this is a favor project running on a single
-local/self-hosted machine, not a multi-environment deployment — see
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full environment-variable list,
-including the optional `NEXT_PUBLIC_INSTITUTE_NAME`). If you're setting this up fresh
-elsewhere, copying `.env.example` to `.env` and generating your own `NEXTAUTH_SECRET` is
-still the right move — don't reuse the dev secret in anything resembling production.
+**Note on `.env`:** only `.env.example` is committed; `.env` is gitignored and has never been
+in the git history. Copy the example and generate your own secret
+(`openssl rand -base64 32`). In production the app refuses to start sign-in with the
+placeholder `NEXTAUTH_SECRET`. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the
+full environment-variable list.
 
 `npx prisma migrate dev` is this project's actual migration convention (confirmed against
 the three migrations already in `prisma/migrations/`) — not `migrate deploy` or `db push`.
 
 ## Default seeded login credentials
 
-Running `npx prisma db seed` wipes and repopulates the database with demo data (3 classes,
+Running `npx prisma db seed` (development only; it refuses to run when `NODE_ENV=production` unless `SEED_ALLOW_PRODUCTION=1`) wipes and repopulates the database with demo data (3 classes,
 6 sections, 6 subjects, 3 teachers, 20 students with guardians, a mix of paid/partially-paid/
 unpaid fee vouchers, a published midterm exam with marks, and a few announcements) and
-prints these same credentials to the console. They come straight from `prisma/seed.ts` —
-copied here verbatim, not invented:
+prints the credentials to the console. By default they are the demo values below; set `SEED_PASSWORD_ADMIN`, `SEED_PASSWORD_TEACHER`, `SEED_PASSWORD_STUDENT`, `SEED_PASSWORD_PARENT` to override them, or `SEED_RANDOM_PASSWORDS=1` to generate random ones. Never expose a seeded database to the internet:
 
 | Role | Username | Password |
 |---|---|---|
@@ -210,7 +206,7 @@ Copied from the spec's Non-Goals, so it isn't lost:
 - Certificate generation + public verification page, student ID card generation.
 - Real PDF export — vouchers/marksheets/report cards are on-screen only in v1 (printable
   via the browser's own print dialog, not a generated PDF file).
-- Scheduled/automated backups (a manual copy of the SQLite file is enough at this scale).
+- Scheduled/automated backups. `npm run backup` snapshots the SQLite DB and uploads; schedule it yourself (cron / Task Scheduler) and copy the result off the machine.
 - The full 8-role permission matrix from the original spec — Super Admin, Accountant, Exam
   Officer, and Reception are all merged into a single Admin role for v1.
 - A full granular audit log of every event — v1 only guarantees soft delete plus basic

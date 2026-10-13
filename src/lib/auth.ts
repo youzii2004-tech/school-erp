@@ -2,6 +2,14 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { isRateLimited, resetRateLimit } from "@/lib/rate-limit";
+
+if (process.env.NODE_ENV === "production") {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret || secret.length < 32 || secret === "your-secret-key-here") {
+    throw new Error("NEXTAUTH_SECRET must be set to a strong random value (>= 32 chars) in production.");
+  }
+}
 
 export async function hashPassword(plain: string) {
   return bcrypt.hash(plain, 10);
@@ -24,12 +32,15 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null;
+        const rlKey = `login:${credentials.username.toLowerCase()}`;
+        if (isRateLimited(rlKey)) return null;
         const user = await prisma.user.findUnique({
           where: { username: credentials.username },
         });
         if (!user || !user.isActive) return null;
         const valid = await verifyPassword(credentials.password, user.passwordHash);
         if (!valid) return null;
+        resetRateLimit(rlKey);
         return { id: user.id, name: user.username, email: user.email, role: user.role };
       },
     }),
