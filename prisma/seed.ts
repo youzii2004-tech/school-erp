@@ -485,6 +485,11 @@ async function main() {
     });
   }
 
+  if (process.env.SEED_FORCE_PASSWORD_CHANGE === "1") {
+    await prisma.user.updateMany({ data: { mustChangePassword: true } });
+    console.log("All seeded users must change their password at first sign-in.");
+  }
+
   // ---- Print credentials -----------------------------------------------
   console.log("\n=== Seed complete. Demo login credentials ===");
   for (const c of credentials) {
