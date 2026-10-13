@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { makeCrudItemRoutes } from "@/lib/api/crud-factory";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -23,7 +22,7 @@ const partialSessionSchema = sessionSchema.partial();
 // unset and the update, leaving two sessions marked isCurrent.
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 

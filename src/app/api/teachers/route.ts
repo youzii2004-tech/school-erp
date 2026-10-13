@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole, hashPassword } from "@/lib/auth";
+import { requireRole, hashPassword, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { teacherCreateSchema } from "@/lib/validation/teacher";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const teachers = await prisma.teacher.findMany({ where: { deletedAt: null }, include: { user: true }, orderBy: { fullName: "asc" } });
   return NextResponse.json(teachers);
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const body = validateOrThrow(teacherCreateSchema, await req.json());

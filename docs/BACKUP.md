@@ -29,3 +29,18 @@ schtasks /Create /SC DAILY /ST 20:00 /TN "School ERP backup" /TR "cmd /c cd /d C
 Test a restore on a spare folder once before you need it.
 
 Backups contain students' personal data. Keep them somewhere access-controlled and encrypted (e.g. BitLocker / an encrypted USB drive).
+
+---
+
+# Known dependency risk: `xlsx`
+
+The `xlsx` package on npm (0.18.5) has unpatched advisories (prototype pollution, ReDoS) and the
+fixed release is only published on SheetJS's own CDN. The app limits exposure (admin-only import,
+2 MB / 2000-row caps), but to remove the risk, on a machine with internet access run:
+
+```
+npm install https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+npm test && npm run build
+```
+
+and commit the updated `package.json` / lockfile.

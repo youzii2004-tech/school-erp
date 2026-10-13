@@ -1,4 +1,4 @@
-import type { NextAuthOptions } from "next-auth";
+import { getServerSession, type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
@@ -21,7 +21,8 @@ export async function verifyPassword(plain: string, hash: string) {
 }
 
 export const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt" },
+  // 8h: a school day. Combined with the per-request isActive check below, stale sessions are short-lived.
+  session: { strategy: "jwt", maxAge: 8 * 60 * 60 },
   pages: { signIn: "/login" },
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
@@ -33,11 +34,18 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials, req) {
         if (!credentials?.username || !credentials?.password) return null;
-        const rlKey = `login:${credentials.username.toLowerCase()}`;
+        const uname = credentials.username.toLowerCase();
         const fwd = req?.headers?.["x-forwarded-for"];
         const ip = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(",")[0]?.trim();
-        // Per-username limit stops targeted guessing; per-IP (looser) stops spraying many usernames.
-        if (isRateLimited(rlKey) || (ip && isRateLimited(`login-ip:${ip}`, 30))) return null;
+        // Three buckets: (username, ip) is strict so one attacker can't lock a real user out from
+        // elsewhere; per-username (looser) still caps distributed guessing; per-IP stops spraying.
+        const rlKey = `login:${uname}|${ip ?? "?"}`;
+        if (
+          isRateLimited(rlKey) ||
+          isRateLimited(`login-user:${uname}`, 50) ||
+          (ip && isRateLimited(`login-ip:${ip}`, 30))
+        )
+          return null;
         const user = await prisma.user.findUnique({
           where: { username: credentials.username },
         });
@@ -51,6 +59,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
         resetRateLimit(rlKey);
+        await audit({ id: user.id, name: user.username }, "login.success", "User", user.id, { ip });
         return { id: user.id, name: user.username, email: user.email, role: user.role };
       },
     }),
@@ -62,10 +71,11 @@ export const authOptions: NextAuthOptions = {
       if (!user && token.id) {
         const current = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { isActive: true, role: true },
+          select: { isActive: true, role: true, mustChangePassword: true },
         });
         if (!current || !current.isActive) return {} as typeof token;
         token.role = current.role;
+        token.mustChange = current.mustChangePassword;
       }
       if (user) {
         token.role = (user as { role?: string }).role;
@@ -73,6 +83,7 @@ export const authOptions: NextAuthOptions = {
         // this onto token.sub, but persisting it explicitly on the token
         // avoids depending on that implicit behavior across NextAuth versions.
         token.id = (user as { id?: string }).id;
+        token.mustChange = false;
       }
       return token;
     },
@@ -87,6 +98,7 @@ export const authOptions: NextAuthOptions = {
         // Prisma calls threw PrismaClientValidationError and surfaced as a
         // bare 500 — found via Task 27's HTTP smoke test.
         (session.user as { id?: unknown }).id = token.id ?? token.sub;
+        (session.user as { mustChange?: unknown }).mustChange = !!token.mustChange;
       }
       return session;
     },
@@ -100,4 +112,15 @@ export function requireRole(
   roles: Role[]
 ): boolean {
   return !!session?.user?.role && roles.includes(session.user.role as Role);
+}
+
+/**
+ * Session for API routes and role-gated pages. A user who still has to replace an
+ * admin-issued temporary password gets NO session here, so every protected route
+ * answers 401 until they do. Only the password-change route and /account use the
+ * raw getServerSession so the user can actually fix it.
+ */
+export async function getSession() {
+  const session = await getServerSession(authOptions);
+  return session?.user?.mustChange ? null : session;
 }

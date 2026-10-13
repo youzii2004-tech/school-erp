@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { promotionCreateSchema } from "@/lib/validation/enrollment";
@@ -25,7 +24,7 @@ import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
 // one row's data went stale between page load and submit. This is an explicit
 // choice, not the only valid one — see task-21-report.md.
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 

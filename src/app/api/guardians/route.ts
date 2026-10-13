@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { guardianCreateSchema } from "@/lib/validation/enrollment";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
 
 // Guardian has no deletedAt field in prisma/schema.prisma — no soft-delete filter here.
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN", "TEACHER"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const guardians = await prisma.guardian.findMany({ orderBy: { fullName: "asc" } });
@@ -15,7 +14,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {

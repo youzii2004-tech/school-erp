@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { examCreateSchema } from "@/lib/validation/exam";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -10,7 +9,7 @@ import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
 // session.user.id (same ownership-check pattern as Task 6/9/12: see
 // src/app/api/students/[id]/route.ts GET for the STUDENT/PARENT precedent).
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const role = session.user.role;
@@ -96,7 +95,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {

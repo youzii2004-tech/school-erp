@@ -192,7 +192,7 @@ list is a real bug.
   (duplicate detection, per-row error report), and a CSV export of the student list.
 - **Settings** — institute profile (name/contact/address), configurable grading bands,
   current-session control.
-- **Audit log & account page** — Admin audit viewer; every user can change their own password at `/account`; Admin → User accounts resets forgotten passwords (one-time temporary password, forced change at next sign-in) and deactivates accounts.
+- **Audit log & account page** — Admin audit viewer; every user can change their own password at `/account` (sessions last 8 hours); Admin → User accounts resets forgotten passwords (one-time temporary password, forced change at next sign-in) and deactivates accounts.
 - **Soft delete** — students, fee records, and exam/mark records use a `deletedAt` column;
   the UI never exposes a hard delete for these.
 - **Demo seed script** — so the app is never empty on first run.
