@@ -54,7 +54,22 @@ const LAST_NAMES = [
   "Qureshi", "Chaudhry",
 ];
 
+import { randomBytes } from "crypto";
+
+// Demo passwords are public (README). Override per role via env, or generate
+// random ones with SEED_RANDOM_PASSWORDS=1.
+function seedPassword(role: "ADMIN" | "TEACHER" | "STUDENT" | "PARENT", fallback: string) {
+  const fromEnv = process.env[`SEED_PASSWORD_${role}`];
+  if (fromEnv) return fromEnv;
+  if (process.env.SEED_RANDOM_PASSWORDS === "1") return randomBytes(9).toString("base64url") + "!1";
+  return fallback;
+}
+
 async function main() {
+  // The seed DELETES every row. Never let it run against a real deployment by accident.
+  if (process.env.NODE_ENV === "production" && process.env.SEED_ALLOW_PRODUCTION !== "1") {
+    throw new Error("Refusing to seed: NODE_ENV=production would wipe all data. Set SEED_ALLOW_PRODUCTION=1 to override.");
+  }
   console.log("Wiping existing seed data (dev reset)...");
 
   // Delete children before parents to respect FK constraints. Order matters.
@@ -124,7 +139,7 @@ async function main() {
   }
 
   // ---- Admin user -----------------------------------------------------------
-  const adminPassword = "Admin@12345";
+  const adminPassword = seedPassword("ADMIN", "Admin@12345");
   const admin = await prisma.user.create({
     data: {
       email: "admin@school-erp.demo",
@@ -141,7 +156,7 @@ async function main() {
     { fullName: "Usman Malik", username: "teacher.usman" },
     { fullName: "Nadia Khan", username: "teacher.nadia" },
   ];
-  const teacherPassword = "Teacher@12345";
+  const teacherPassword = seedPassword("TEACHER", "Teacher@12345");
   const teachers = [];
   for (const t of teacherNames) {
     const user = await prisma.user.create({
@@ -265,7 +280,7 @@ async function main() {
     let studentUserId: string | undefined;
     if (!studentUserGiven) {
       const studentUsername = "student.demo";
-      const studentPassword = "Student@12345";
+      const studentPassword = seedPassword("STUDENT", "Student@12345");
       const su = await prisma.user.create({
         data: {
           email: `${studentUsername}@school-erp.demo`,
@@ -327,7 +342,7 @@ async function main() {
       let parentUserId: string | undefined;
       if (parentUsersGiven < 2) {
         const parentUsername = `parent.demo${parentUsersGiven + 1}`;
-        const parentPassword = "Parent@12345";
+        const parentPassword = seedPassword("PARENT", "Parent@12345");
         const pu = await prisma.user.create({
           data: {
             email: `${parentUsername}@school-erp.demo`,
@@ -468,6 +483,11 @@ async function main() {
     await prisma.announcement.create({
       data: { ...a, createdById: admin.id },
     });
+  }
+
+  if (process.env.SEED_FORCE_PASSWORD_CHANGE === "1") {
+    await prisma.user.updateMany({ data: { mustChangePassword: true } });
+    console.log("All seeded users must change their password at first sign-in.");
   }
 
   // ---- Print credentials -----------------------------------------------

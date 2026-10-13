@@ -1,7 +1,7 @@
+import { audit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
 import { getSetting, setSetting } from "@/lib/settings";
 import { DEFAULT_GRADE_BANDS } from "@/lib/grading";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -21,7 +21,7 @@ const settingWriteSchema = z.object({
 // page can hydrate all three form sections (Institute, Grading Bands, Current
 // Session's non-session-table parts) from a single request.
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -35,13 +35,14 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
     const body = validateOrThrow(settingWriteSchema, await req.json());
     await setSetting(body.key, body.value);
+    await audit({ id: session!.user.id, name: session!.user.name }, "setting.update", "Setting", body.key);
     return NextResponse.json({ ok: true });
   } catch (e) {
     if (e instanceof ValidationError) return NextResponse.json({ error: e.issues }, { status: 400 });

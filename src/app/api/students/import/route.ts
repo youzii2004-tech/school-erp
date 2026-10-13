@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { parseStudentRows, StudentRow } from "@/lib/import-export";
 
@@ -24,6 +24,8 @@ import { parseStudentRows, StudentRow } from "@/lib/import-export";
 //      findMany({ admissionNumber: { in: [...] } }) here in the route (not
 //      in parseStudentRows), so parseStudentRows stays synchronously
 //      testable per the Task 24 brief's Interfaces line.
+const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
+
 type DuplicateEntry = {
   admissionNumber: string;
   validRowIndex: number; // 1-based position within the parsed `valid` list (not the sheet row)
@@ -76,7 +78,7 @@ async function computePreview(buffer: Buffer) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -84,6 +86,11 @@ export async function POST(req: NextRequest) {
   const file = formData.get("file");
   if (!file || typeof file === "string")
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+
+  // xlsx has known unpatched parser vulnerabilities (ReDoS / prototype pollution),
+  // so bound what we feed it.
+  if (file.size > MAX_IMPORT_BYTES)
+    return NextResponse.json({ error: "File too large (max 2MB)" }, { status: 413 });
 
   const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -102,6 +109,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await prisma.student.createMany({ data: preview.valid });
+    await audit({ id: session!.user.id, name: session!.user.name }, "student.import", "Student", undefined, { imported: result.count });
     return NextResponse.json(
       { ...preview, imported: result.count },
       { status: 201 }

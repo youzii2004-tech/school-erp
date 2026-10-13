@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -11,7 +11,7 @@ const marksBulkSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN", "TEACHER"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
@@ -36,6 +36,16 @@ export async function POST(req: NextRequest) {
     if (body.entries.some((e) => e.obtainedMarks > examSubject.totalMarks))
       return NextResponse.json({ error: "Obtained marks cannot exceed total marks" }, { status: 400 });
 
+    // Marks may only be recorded for students actively enrolled in the exam subject's class.
+    const ids = [...new Set(body.entries.map((e) => e.studentId))];
+    const rostered = await prisma.enrollment.findMany({
+      where: { classId: examSubject.classId, status: "ACTIVE", studentId: { in: ids } },
+      distinct: ["studentId"],
+      select: { studentId: true },
+    });
+    if (rostered.length !== ids.length)
+      return NextResponse.json({ error: "One or more students are not enrolled in this class" }, { status: 400 });
+
     await prisma.$transaction(
       body.entries.map((entry) =>
         prisma.mark.upsert({
@@ -51,6 +61,7 @@ export async function POST(req: NextRequest) {
         })
       )
     );
+    await audit({ id: session!.user.id, name: session!.user.name }, "marks.save", "Mark", body.examSubjectId, { count: body.entries.length });
     return NextResponse.json({ ok: true });
   } catch (e) {
     if (e instanceof ValidationError) return NextResponse.json({ error: e.issues }, { status: 400 });
@@ -59,7 +70,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const examSubjectId = req.nextUrl.searchParams.get("examSubjectId");
   if (!examSubjectId) return NextResponse.json({ error: "examSubjectId is required" }, { status: 400 });

@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <strong>Enterprise Multi-Role School Management System</strong><br>
-  Built with Next.js 16 (App Router), React 19, TypeScript, Prisma ORM, NextAuth RBAC, Recharts & Zero-Install Portable Windows Runtime.
+  <strong>Multi-Role School Management System (MVP)</strong><br>
+  Built with Next.js 16 (App Router), React 19, TypeScript, Prisma ORM, NextAuth RBAC, Recharts & Zod.
 </p>
 
 <p align="center">
@@ -50,7 +50,7 @@
 
 - **Automated Voucher Engine:** Batch-generates monthly fee vouchers per class/session with parameterized tuition structures.
 - **Tri-State Accounting:** Real-time visual tracking across `PAID`, `PARTIALLY PAID`, and `UNPAID` states.
-- **Jest-Verified Accounting:** 100% test coverage on voucher calculation and grading math to guarantee zero ledger discrepancies.
+- **Unit-Tested Accounting:** the voucher-status and grading helpers (`fee-calc.ts`, `grading.ts`) are covered by Jest unit tests. This is not whole-app coverage; API routes and UI have no automated tests.
 - **Printable Bank Slips:** Dedicated on-screen bank voucher print layout with customer and school stubs.
 
 ---
@@ -84,7 +84,7 @@ for the exact scope line.
 - **Validation:** Zod, shared between forms and API route handlers.
 - **Import/export:** `xlsx`, for CSV/Excel student bulk import and CSV export.
 - **Testing:** Jest (`ts-jest`) for focused unit tests on core business logic
-  (password hashing, CRUD validation, voucher/grading math).
+  (password hashing, CRUD validation, voucher/grading math, rate limiter, upload validation).
 
 ## Prerequisites
 
@@ -98,7 +98,7 @@ for the exact scope line.
 
 ```bash
 npm install
-cp .env.example .env      # already checked in — see note below
+cp .env.example .env      # then set your own NEXTAUTH_SECRET
 npx prisma migrate dev
 npx prisma db seed
 npm run dev
@@ -106,25 +106,21 @@ npm run dev
 
 Then open `http://localhost:3000` and sign in with one of the seeded accounts below.
 
-**Note on `.env`:** `.env.example` is checked into this repo with the three variables the
-app reads (`DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`); a working `.env` for local
-development is *also* already checked in (this is a favor project running on a single
-local/self-hosted machine, not a multi-environment deployment — see
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full environment-variable list,
-including the optional `NEXT_PUBLIC_INSTITUTE_NAME`). If you're setting this up fresh
-elsewhere, copying `.env.example` to `.env` and generating your own `NEXTAUTH_SECRET` is
-still the right move — don't reuse the dev secret in anything resembling production.
+**Note on `.env`:** only `.env.example` is committed; `.env` is gitignored and has never been
+in the git history. Copy the example and generate your own secret
+(`openssl rand -base64 32`). In production the app refuses to start sign-in with the
+placeholder `NEXTAUTH_SECRET`. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the
+full environment-variable list.
 
 `npx prisma migrate dev` is this project's actual migration convention (confirmed against
 the three migrations already in `prisma/migrations/`) — not `migrate deploy` or `db push`.
 
 ## Default seeded login credentials
 
-Running `npx prisma db seed` wipes and repopulates the database with demo data (3 classes,
+Running `npx prisma db seed` (development only; it refuses to run when `NODE_ENV=production` unless `SEED_ALLOW_PRODUCTION=1`) wipes and repopulates the database with demo data (3 classes,
 6 sections, 6 subjects, 3 teachers, 20 students with guardians, a mix of paid/partially-paid/
 unpaid fee vouchers, a published midterm exam with marks, and a few announcements) and
-prints these same credentials to the console. They come straight from `prisma/seed.ts` —
-copied here verbatim, not invented:
+prints the credentials to the console. By default they are the demo values below; set `SEED_PASSWORD_ADMIN`, `SEED_PASSWORD_TEACHER`, `SEED_PASSWORD_STUDENT`, `SEED_PASSWORD_PARENT` to override them, or `SEED_RANDOM_PASSWORDS=1` to generate random ones. Never expose a seeded database to the internet:
 
 | Role | Username | Password |
 |---|---|---|
@@ -148,28 +144,16 @@ npm test                    # Jest — unit tests for auth, CRUD validation, vou
 npm run build && npm start  # production build, then serve it
 ```
 
-## Portable Windows build (no installs on the target PC)
+## Deploying
 
-```bash
-npm run build:portable
-```
+Run it on one machine with Node.js 20+: `npm ci`, set `.env` (strong `NEXTAUTH_SECRET`), `npx prisma migrate deploy`,
+`npm run build && npm start`. A one-click portable Windows build is **not** implemented. Before first real use:
+back up the database, rotate any seeded passwords, and set up scheduled backups ([`docs/BACKUP.md`](docs/BACKUP.md)).
+Apply database changes with `npx prisma migrate deploy` (not `migrate dev`) on a live database, after a backup.
 
-Produces a `dist/` folder containing `Start School ERP.exe` — copy the whole
-folder to any Windows PC and double-click that exe; it starts the server and
-opens the app in the browser automatically. No Node, Docker, or `npm
-install` needed on the target machine. See
-[`docs/PACKAGING.md`](docs/PACKAGING.md) for how it works, how to rebuild
-after code changes, and how to keep a school's real data safe across
-rebuilds. When handing the `dist/` folder to a non-technical person, send
-[`docs/START_HERE_FOR_YOUR_FRIEND.md`](docs/START_HERE_FOR_YOUR_FRIEND.md)
-along with it — it's written for them, not a developer.
-
-As of the last verification pass (Task 27), `npm test` passes 8 suites / 20 tests, and
-`npm run build` compiles cleanly with zero TypeScript errors across all routes and pages.
-`npm run lint` has a documented set of non-functional, deferred lint warnings (mostly a
-strict `react-hooks/set-state-in-effect` rule flagging a common, working "reset dialog
-state on open" pattern) — see Task 27's report for the full breakdown; nothing in that
-list is a real bug.
+`npm test` passes (42 tests across unit and route-level suites), `npm run build` compiles cleanly, and
+`npm run lint` reports 0 errors and a set of `react-hooks/set-state-in-effect` warnings (a working
+"reset dialog state on open" pattern, not a bug).
 
 ## What's included in v1
 
@@ -196,6 +180,7 @@ list is a real bug.
   (duplicate detection, per-row error report), and a CSV export of the student list.
 - **Settings** — institute profile (name/contact/address), configurable grading bands,
   current-session control.
+- **Audit log & account page** — Admin audit viewer; every user can change their own password at `/account` (sessions last 8 hours); Admin → User accounts resets forgotten passwords (one-time temporary password, forced change at next sign-in) and deactivates accounts.
 - **Soft delete** — students, fee records, and exam/mark records use a `deletedAt` column;
   the UI never exposes a hard delete for these.
 - **Demo seed script** — so the app is never empty on first run.
@@ -210,11 +195,10 @@ Copied from the spec's Non-Goals, so it isn't lost:
 - Certificate generation + public verification page, student ID card generation.
 - Real PDF export — vouchers/marksheets/report cards are on-screen only in v1 (printable
   via the browser's own print dialog, not a generated PDF file).
-- Scheduled/automated backups (a manual copy of the SQLite file is enough at this scale).
+- Scheduled/automated backups. `npm run backup` snapshots the SQLite DB and uploads with retention; see [`docs/BACKUP.md`](docs/BACKUP.md) for scheduling, off-site copy and restore steps.
 - The full 8-role permission matrix from the original spec — Super Admin, Accountant, Exam
   Officer, and Reception are all merged into a single Admin role for v1.
-- A full granular audit log of every event — v1 only guarantees soft delete plus basic
-  created/updated timestamps, not a per-field change history.
+- A full per-field change history. v1 has an append-only **audit log** (who/what/when for payments, vouchers, marks, attendance, student/teacher changes, promotions, publishing, uploads, imports, settings and password changes; viewable at Admin → Audit log) plus soft delete, but it does not record before/after values.
 
 If any of these are wanted later, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)'s
 "Deferred modules" section for the smallest concrete next step for each one.

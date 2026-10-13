@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { studentsToSheetBuffer } from "@/lib/import-export";
 
@@ -12,7 +11,7 @@ import { studentsToSheetBuffer } from "@/lib/import-export";
 // supports `q`, matching that route's exact filter shape rather than
 // inventing a class filter that doesn't exist elsewhere in the app.
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN", "TEACHER"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 

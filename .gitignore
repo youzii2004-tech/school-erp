@@ -58,3 +58,4 @@ next-env.d.ts
 
 # Subagent-driven-development scratch workspace (ledgers, briefs, review packages)
 /.superpowers/
+/backups

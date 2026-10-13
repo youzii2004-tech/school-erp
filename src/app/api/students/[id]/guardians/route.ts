@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { guardianLinkSchema } from "@/lib/validation/enrollment";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -8,7 +7,7 @@ import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
 // Next.js 16: dynamic route params are async — must be awaited before use.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {

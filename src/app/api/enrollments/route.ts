@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { enrollmentCreateSchema } from "@/lib/validation/enrollment";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -12,7 +11,7 @@ import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
 // Same shape/ordering convention as that route: rollNumber-sorted, plain
 // {studentId, rollNumber, fullName} rows.
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN", "TEACHER"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -44,7 +43,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +67,9 @@ export function Topbar({ role }: { role: Role }) {
             </Badge>
           </div>
         )}
+        <Link href="/account" className="text-sm text-muted-foreground hover:text-foreground">
+          Account
+        </Link>
         <Button
           variant="ghost"
           size="sm"

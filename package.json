@@ -15,7 +15,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest"
+    "test": "jest",
+    "backup": "node scripts/backup.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -25,7 +26,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.31.0",
-    "next": "16.3.1",
+    "next": "16.3.8",
     "next-auth": "^4.24.15",
     "prisma": "^6.19.3",
     "react": "19.2.8",
@@ -44,7 +45,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.1",
+    "eslint-config-next": "16.3.8",
     "jest": "^30.4.2",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.12",

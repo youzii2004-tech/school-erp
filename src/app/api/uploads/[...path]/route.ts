@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { readFile } from "fs/promises";
 import path from "path";
@@ -25,7 +24,7 @@ export async function GET(
 ) {
   const { path: pathSegments } = await params;
 
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Reject any raw ".." (or empty) segment before we even build a path — decoding
@@ -83,6 +82,9 @@ export async function GET(
     headers: {
       "Content-Type": contentTypeFor(resolvedPath),
       "Content-Disposition": `inline; filename="${path.basename(resolvedPath)}"`,
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox",
+      "Cache-Control": "private, no-store",
     },
   });
 }

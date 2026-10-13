@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { studentCreateSchema } from "@/lib/validation/student";
 import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
@@ -15,7 +15,7 @@ import { validateOrThrow, ValidationError } from "@/lib/api/crud-factory";
 // same pattern rather than adding a new route. ADMIN/TEACHER behavior below
 // is unchanged.
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   if (session.user.role === "STUDENT") {
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.student.findUnique({ where: { admissionNumber: body.admissionNumber } });
     if (existing) return NextResponse.json({ error: "Admission number already exists" }, { status: 409 });
     const student = await prisma.student.create({ data: body });
+    await audit({ id: session!.user.id, name: session!.user.name }, "student.create", "Student", student.id, { admissionNumber: student.admissionNumber });
     return NextResponse.json(student, { status: 201 });
   } catch (e) {
     if (e instanceof ValidationError) return NextResponse.json({ error: e.issues }, { status: 400 });

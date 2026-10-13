@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions, requireRole } from "@/lib/auth";
+import { requireRole, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { calculateAttendancePercentage } from "@/lib/attendance-stats";
 import { calculateGrade } from "@/lib/grading";
@@ -35,7 +34,7 @@ function last6Months(): { year: number; month0: number; label: string }[] {
 }
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!requireRole(session, ["ADMIN", "TEACHER"]))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
